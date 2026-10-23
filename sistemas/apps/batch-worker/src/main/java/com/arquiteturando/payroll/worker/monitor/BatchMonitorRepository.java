@@ -7,6 +7,8 @@ import com.arquiteturando.payroll.worker.monitor.dto.BatchJobView;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchStatus;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchRequestCorrelation;
 import com.arquiteturando.payroll.worker.monitor.dto.PageResponse;
+import com.arquiteturando.payroll.worker.monitor.dto.PerformanceMetrics;
+import com.arquiteturando.payroll.worker.monitor.dto.MetricWindow;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -85,6 +87,31 @@ public class BatchMonitorRepository {
         var executions=executions(null,null,id,null,null,0,100).items();
         return new BatchRequestCorrelation(id,base.requestStatus(),base.createdAt(),base.startedAt(),base.completedAt(),
                 base.totalDocuments(),base.completedDocuments(),base.failedDocuments(),executions);
+    }
+
+    public PerformanceMetrics performance(Instant from, Instant to, String jobName, String stepName) {
+        validateWindow(from,to);
+        Map<String,Object> p=new HashMap<>(Map.of("from",from,"to",to));
+        String jobFilter=""; if(jobName!=null){jobFilter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
+        String source=" FROM batch_job_execution e JOIN batch_job_instance i USING(job_instance_id)";
+        String stepFilter="";
+        if(stepName!=null){source=" FROM batch_step_execution e JOIN batch_job_execution je USING(job_execution_id) JOIN batch_job_instance i ON i.job_instance_id=je.job_instance_id";stepFilter=" AND e.step_name=:stepName";p.put("stepName",stepName);}
+        String sql="""
+                SELECT count(*),coalesce(avg(extract(epoch from (e.end_time-e.start_time))*1000),0),
+                 coalesce(min(extract(epoch from (e.end_time-e.start_time))*1000),0),
+                 coalesce(max(extract(epoch from (e.end_time-e.start_time))*1000),0),
+                 coalesce(percentile_cont(.5) within group(order by extract(epoch from (e.end_time-e.start_time))*1000),0),
+                 coalesce(percentile_cont(.95) within group(order by extract(epoch from (e.end_time-e.start_time))*1000),0),
+                 coalesce(percentile_cont(.99) within group(order by extract(epoch from (e.end_time-e.start_time))*1000),0)
+                """+source+" WHERE e.start_time>=:from AND e.start_time<=:to AND e.end_time IS NOT NULL"+jobFilter+stepFilter;
+        return jdbc.sql(sql).params(p).query((rs,row)->new PerformanceMetrics(new MetricWindow(from,to),rs.getLong(1),
+                rs.getDouble(2),rs.getLong(3),rs.getLong(4),rs.getDouble(5),rs.getDouble(6),rs.getDouble(7),
+                0,0,0,0,0,0)).single();
+    }
+
+    static void validateWindow(Instant from, Instant to) {
+        if(from==null || to==null || !from.isBefore(to) || java.time.Duration.between(from,to).toDays()>31)
+            throw new IllegalArgumentException("Invalid metrics window; maximum is 31 days");
     }
 
     public PageResponse<BatchExecutionSummary> executions(String jobName, BatchStatus status, UUID requestId,
