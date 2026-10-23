@@ -1,0 +1,21 @@
+{
+  "info": {"name":"Spring Batch Internal Monitor","schema":"https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "variable": [
+    {"key":"from","value":"2026-10-23T00:00:00Z"},
+    {"key":"to","value":"2026-10-24T00:00:00Z"},
+    {"key":"executionId","value":"1"}
+  ],
+  "item": [
+    {"name":"Jobs","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/jobs"}},
+    {"name":"Execuções","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/executions?page=0&size=20"}},
+    {"name":"Detalhe","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/executions/{{executionId}}"}},
+    {"name":"Steps","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/executions/{{executionId}}/steps"}},
+    {"name":"Correlação","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/requests/{{requestId}}"}},
+    {"name":"Resumo","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/metrics/summary?from={{from}}&to={{to}}"}},
+    {"name":"Performance","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/metrics/performance?from={{from}}&to={{to}}"}},
+    {"name":"Vazão","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/metrics/throughput?from={{from}}&to={{to}}"}},
+    {"name":"Resiliência","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/metrics/resilience?from={{from}}&to={{to}}"}},
+    {"name":"Dependências","request":{"method":"GET","url":"{{workerUrl}}/internal/v1/batch/metrics/dependencies"}},
+    {"name":"Prometheus","request":{"method":"GET","url":"{{workerUrl}}/actuator/prometheus"}}
+  ]
+}
