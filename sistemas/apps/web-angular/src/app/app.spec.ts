@@ -1,24 +1,2 @@
-import { TestBed } from '@angular/core/testing';
-import { App } from './app';
-
-describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [App],
-    })
-      .compileComponents();
-  });
-
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, web-angular');
-  });
-});
+import {TestBed} from '@angular/core/testing';import{of}from'rxjs';import{App}from'./app';import{PayrollApi}from'./payroll-api';
+describe('App',()=>{const api={employees:vi.fn(),requestExport:vi.fn()};beforeEach(async()=>{vi.clearAllMocks();await TestBed.configureTestingModule({imports:[App],providers:[{provide:PayrollApi,useValue:api}]}).compileComponents()});it('creates the app',()=>expect(TestBed.createComponent(App).componentInstance).toBeTruthy());it('sends exactly one request after one click',async()=>{api.employees.mockReturnValue(of([{employeeId:101,registration:'MAT-101',name:'Ana Horizonte',paymentCount:2}]));api.requestExport.mockReturnValue(of({requestId:'req-1',status:'ACCEPTED',statusUrl:'/api/v1/exports/req-1'}));const fixture=TestBed.createComponent(App);fixture.componentInstance.loadEmployees();fixture.componentInstance.toggle(101);fixture.detectChanges();(fixture.nativeElement.querySelector('.primary')as HTMLButtonElement).click();await fixture.whenStable();fixture.detectChanges();expect(api.requestExport).toHaveBeenCalledTimes(1);expect(fixture.nativeElement.textContent).toContain('Solicitação aceita')})});
