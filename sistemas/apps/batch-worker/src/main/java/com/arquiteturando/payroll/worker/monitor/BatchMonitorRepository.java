@@ -5,6 +5,7 @@ import com.arquiteturando.payroll.worker.monitor.dto.BatchExecutionDetail;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchStepExecutionView;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchJobView;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchStatus;
+import com.arquiteturando.payroll.worker.monitor.dto.BatchRequestCorrelation;
 import com.arquiteturando.payroll.worker.monitor.dto.PageResponse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -71,6 +72,19 @@ public class BatchMonitorRepository {
                 GROUP BY i.job_name ORDER BY i.job_name
                 """).query((rs, row) -> new BatchJobView(rs.getString(1), rs.getLong(2), nullableLong(rs, 3),
                         status(rs.getString(4)), instant(rs, 5))).list();
+    }
+
+    public BatchRequestCorrelation request(UUID id) {
+        var rows=jdbc.sql("""
+                SELECT id,status,created_at,started_at,completed_at,total_documents,completed_documents,failed_documents
+                FROM solicitacao WHERE id=:id
+                """).param("id",id).query((rs,row)->new BatchRequestCorrelation(id,rs.getString(2),instant(rs,3),
+                        instant(rs,4),instant(rs,5),rs.getLong(6),rs.getLong(7),rs.getLong(8),List.of())).list();
+        if(rows.isEmpty()) return null;
+        var base=rows.getFirst();
+        var executions=executions(null,null,id,null,null,0,100).items();
+        return new BatchRequestCorrelation(id,base.requestStatus(),base.createdAt(),base.startedAt(),base.completedAt(),
+                base.totalDocuments(),base.completedDocuments(),base.failedDocuments(),executions);
     }
 
     public PageResponse<BatchExecutionSummary> executions(String jobName, BatchStatus status, UUID requestId,

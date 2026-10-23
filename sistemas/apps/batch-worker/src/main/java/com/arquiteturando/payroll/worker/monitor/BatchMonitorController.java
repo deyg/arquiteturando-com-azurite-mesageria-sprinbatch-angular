@@ -47,4 +47,11 @@ public class BatchMonitorController {
         if(result==null) throw new ResponseStatusException(NOT_FOUND,"Batch execution not found");
         return result;
     }
+
+    @GetMapping("/requests/{requestId}")
+    Object request(@PathVariable UUID requestId) {
+        var result=repository.request(requestId);
+        if(result==null) throw new ResponseStatusException(NOT_FOUND,"Request not found");
+        return result;
+    }
 }

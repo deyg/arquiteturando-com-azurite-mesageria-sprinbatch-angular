@@ -39,5 +39,8 @@ class BatchMonitorRepositoryTest {
         assertThat(detail.steps()).extracting(s -> s.stepName()).containsExactly(
                 "prepareRequestStep","generateDocumentsStep","completeRequestStep");
         assertThat(detail.steps()).allMatch(s -> s.durationMs() != null && s.durationMs() >= 0);
+        var correlation=repository.request(id);
+        assertThat(correlation.requestStatus()).isEqualTo("COMPLETED");
+        assertThat(correlation.executions()).hasSize(1);
     }
 }
