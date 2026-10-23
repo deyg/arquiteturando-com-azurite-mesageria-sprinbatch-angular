@@ -1,6 +1,14 @@
 server:
   port: ${WORKER_PORT:8083}
-management.endpoints.web.exposure.include: health
+management:
+  endpoints.web.exposure.include: health,metrics,prometheus
+  metrics:
+    tags.application: ${spring.application.name:batch-worker}
+    distribution.percentiles-histogram:
+      payroll.batch.pdf.duration: true
+      payroll.batch.blob.duration: true
+      payroll.batch.job.duration: true
+      payroll.batch.step.duration: true
 spring:
   application.name: batch-worker
   batch.job.enabled: false
