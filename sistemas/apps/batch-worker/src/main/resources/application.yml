@@ -22,3 +22,4 @@ payroll.storage:
   connection-string: ${AZURITE_CONNECTION_STRING:UseDevelopmentStorage=true}
   container: ${AZURITE_CONTAINER:payroll-documents}
 payroll.kafka.topic: ${PAYROLL_EXPORT_TOPIC:payroll.exports.requested.v1}
+payroll.pdf-motor.url: ${PDF_MOTOR_URL:http://127.0.0.1:8084}

@@ -16,6 +16,7 @@ class PrepareRequestStepTest {
     @Autowired RequestIngestionService ingestion;
     @Autowired ExportJobCoordinator coordinator;
     @Autowired JdbcClient jdbc;
+    @Autowired BlobStorageService storage;
 
     @Test
     void requestWithoutPaymentsCompletesWithZeroDocuments() {
@@ -31,9 +32,16 @@ class PrepareRequestStepTest {
         coordinator.launch(id);
         int firstCount = documentCount(id);
         coordinator.launch(id);
-        assertThat(status(id)).isEqualTo("PROCESSING");
+        assertThat(status(id)).isEqualTo("COMPLETED");
         assertThat(firstCount).isEqualTo(2);
         assertThat(documentCount(id)).isEqualTo(2);
+        var documents = jdbc.sql("SELECT blob_name FROM documento_gerado WHERE solicitacao_id=:id AND status='COMPLETED' AND length(checksum_sha256)=64")
+                .param("id", id).query(String.class).list();
+        assertThat(documents).hasSize(2);
+        assertThat(documents).allSatisfy(blob -> {
+            assertThat(storage.exists(blob)).isTrue();
+            assertThat(new String(storage.download(blob), 0, 5)).isEqualTo("%PDF-");
+        });
     }
 
     private UUID ingest(List<Long> employees, String start, String end, List<String> types) {
