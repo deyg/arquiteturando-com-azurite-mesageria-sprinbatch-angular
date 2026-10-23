@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Payroll Export POC — Contratos v0.1",
-    "description": "Collection preliminar; depende de implementacao futura das APIs.",
+    "description": "Collection executável da POC local; todas as rotas passam pelo BFF.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -181,7 +181,7 @@
         "header": [
           {
             "key": "Accept",
-            "value": "application/json"
+            "value": "application/pdf"
           }
         ]
       },
