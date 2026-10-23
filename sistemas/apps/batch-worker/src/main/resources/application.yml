@@ -9,7 +9,16 @@ spring:
     url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/payroll}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:}
-  kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+    consumer:
+      group-id: payroll-batch-worker
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+    listener.ack-mode: manual_immediate
 payroll.storage:
   connection-string: ${AZURITE_CONNECTION_STRING:UseDevelopmentStorage=true}
   container: ${AZURITE_CONTAINER:payroll-documents}
+payroll.kafka.topic: ${PAYROLL_EXPORT_TOPIC:payroll.exports.requested.v1}
