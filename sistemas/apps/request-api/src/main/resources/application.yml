@@ -11,4 +11,7 @@ spring:
       properties:
         enable.idempotence: true
         acks: all
+        max.block.ms: 3000
+        request.timeout.ms: 3000
+        delivery.timeout.ms: 5000
 payroll.kafka.topic: ${PAYROLL_EXPORT_TOPIC:payroll.exports.requested.v1}
