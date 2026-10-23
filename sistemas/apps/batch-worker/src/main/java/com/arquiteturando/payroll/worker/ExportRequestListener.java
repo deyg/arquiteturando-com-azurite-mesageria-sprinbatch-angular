@@ -9,9 +9,11 @@ import org.springframework.stereotype.Component;
 public class ExportRequestListener {
     private final ObjectMapper mapper;
     private final RequestIngestionService ingestion;
+    private final ExportJobCoordinator jobs;
 
-    public ExportRequestListener(RequestIngestionService ingestion) {
+    public ExportRequestListener(RequestIngestionService ingestion, ExportJobCoordinator jobs) {
         this.ingestion = ingestion;
+        this.jobs = jobs;
         this.mapper = new ObjectMapper().findAndRegisterModules();
     }
 
@@ -20,6 +22,7 @@ public class ExportRequestListener {
         ExportRequestedEvent event = mapper.readValue(json, ExportRequestedEvent.class);
         if (event.eventVersion() != 1) throw new IllegalArgumentException("Unsupported eventVersion");
         ingestion.ingest(event);
+        jobs.launch(event.requestId());
         acknowledgment.acknowledge();
     }
 }
