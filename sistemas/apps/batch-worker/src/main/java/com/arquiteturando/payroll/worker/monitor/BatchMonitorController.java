@@ -11,6 +11,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -29,5 +32,19 @@ public class BatchMonitorController {
             @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant startedTo,
             @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
         return repository.executions(jobName, status, requestId, startedFrom, startedTo, page, size);
+    }
+
+    @GetMapping("/executions/{executionId}")
+    Object execution(@PathVariable long executionId) {
+        var result=repository.execution(executionId);
+        if(result==null) throw new ResponseStatusException(NOT_FOUND,"Batch execution not found");
+        return result;
+    }
+
+    @GetMapping("/executions/{executionId}/steps")
+    Object steps(@PathVariable long executionId) {
+        var result=repository.steps(executionId);
+        if(result==null) throw new ResponseStatusException(NOT_FOUND,"Batch execution not found");
+        return result;
     }
 }

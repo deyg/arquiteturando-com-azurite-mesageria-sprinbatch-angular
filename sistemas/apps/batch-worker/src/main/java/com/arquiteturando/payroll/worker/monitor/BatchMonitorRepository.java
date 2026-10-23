@@ -1,6 +1,8 @@
 package com.arquiteturando.payroll.worker.monitor;
 
 import com.arquiteturando.payroll.worker.monitor.dto.BatchExecutionSummary;
+import com.arquiteturando.payroll.worker.monitor.dto.BatchExecutionDetail;
+import com.arquiteturando.payroll.worker.monitor.dto.BatchStepExecutionView;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchJobView;
 import com.arquiteturando.payroll.worker.monitor.dto.BatchStatus;
 import com.arquiteturando.payroll.worker.monitor.dto.PageResponse;
@@ -13,13 +15,51 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class BatchMonitorRepository {
     private final JdbcClient jdbc;
+    private final JobRepository jobs;
 
-    public BatchMonitorRepository(JdbcClient jdbc) { this.jdbc = jdbc; }
+    public BatchMonitorRepository(JdbcClient jdbc, JobRepository jobs) { this.jdbc = jdbc; this.jobs = jobs; }
+
+    public BatchExecutionDetail execution(long id) {
+        JobExecution e = jobs.getJobExecution(id);
+        if (e == null) return null;
+        var parameters = e.getJobParameters().parameters().stream().collect(java.util.stream.Collectors.toMap(
+                p -> p.name(), p -> String.valueOf(p.value())));
+        UUID requestId = parameters.containsKey("requestId") ? UUID.fromString(parameters.get("requestId")) : null;
+        List<BatchStepExecutionView> steps = e.getStepExecutions().stream().map(this::step).toList();
+        Instant start=utc(e.getStartTime()), end=utc(e.getEndTime());
+        return new BatchExecutionDetail(e.getJobInstance().getJobName(),e.getJobInstanceId(),e.getId(),requestId,
+                status(e.getStatus().name()),utc(e.getCreateTime()),start,end,duration(start,end),
+                e.getExitStatus().getExitCode(),utc(e.getLastUpdated()),limit(e.getExitStatus().getExitDescription()),
+                parameters,steps);
+    }
+
+    public List<BatchStepExecutionView> steps(long id) {
+        var detail=execution(id); return detail == null ? null : detail.steps();
+    }
+
+    private BatchStepExecutionView step(StepExecution s) {
+        Instant start=utc(s.getStartTime()), end=utc(s.getEndTime());
+        return new BatchStepExecutionView(s.getId(),s.getStepName(),status(s.getStatus().name()),start,end,
+                duration(start,end),s.getReadCount(),s.getWriteCount(),s.getFilterCount(),s.getSkipCount(),
+                s.getReadSkipCount(),s.getProcessSkipCount(),s.getWriteSkipCount(),s.getCommitCount(),
+                s.getRollbackCount(),s.getExitStatus().getExitCode(),limit(s.getExitStatus().getExitDescription()));
+    }
+
+    private static Instant utc(java.time.LocalDateTime value) {
+        return value == null ? null : value.toInstant(java.time.ZoneOffset.UTC);
+    }
+    private static Long duration(Instant start, Instant end) {
+        return start == null || end == null ? null : end.toEpochMilli()-start.toEpochMilli();
+    }
+    private static String limit(String value) { return value == null || value.length()<=4000 ? value : value.substring(0,4000); }
 
     public List<BatchJobView> jobs() {
         return jdbc.sql("""

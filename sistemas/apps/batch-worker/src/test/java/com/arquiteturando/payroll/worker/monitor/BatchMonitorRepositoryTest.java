@@ -34,5 +34,10 @@ class BatchMonitorRepositoryTest {
         assertThat(page.totalElements()).isEqualTo(1);
         assertThat(page.items().getFirst().requestId()).isEqualTo(id);
         assertThat(page.items().getFirst().status().name()).isEqualTo("COMPLETED");
+        var detail=repository.execution(page.items().getFirst().jobExecutionId());
+        assertThat(detail.parameters()).containsEntry("requestId",id.toString());
+        assertThat(detail.steps()).extracting(s -> s.stepName()).containsExactly(
+                "prepareRequestStep","generateDocumentsStep","completeRequestStep");
+        assertThat(detail.steps()).allMatch(s -> s.durationMs() != null && s.durationMs() >= 0);
     }
 }
