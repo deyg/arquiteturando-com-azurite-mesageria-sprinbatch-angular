@@ -12,6 +12,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 
 @Service
 public class ExportJobCoordinator {
@@ -20,13 +22,19 @@ public class ExportJobCoordinator {
     private final Job job;
     private final JobExplorer explorer;
     private final JdbcClient jdbc;
+    private final io.micrometer.core.instrument.Counter recovered;
+    private final io.micrometer.core.instrument.Counter preserved;
+    private final Timer recoveryDuration;
 
     public ExportJobCoordinator(JobLauncher launcher, Job exportPayrollDocumentsJob,
-                                JobExplorer explorer, JdbcClient jdbc) {
+                                JobExplorer explorer, JdbcClient jdbc, MeterRegistry metrics) {
         this.launcher = launcher;
         this.job = exportPayrollDocumentsJob;
         this.explorer = explorer;
         this.jdbc = jdbc;
+        this.recovered=metrics.counter("payroll.batch.jobs.recovered");
+        this.preserved=metrics.counter("payroll.batch.documents.preserved");
+        this.recoveryDuration=metrics.timer("payroll.batch.recovery.duration");
     }
 
     public synchronized void launch(UUID requestId) {
@@ -48,8 +56,12 @@ public class ExportJobCoordinator {
 
     @EventListener(ApplicationReadyEvent.class)
     public void recoverPendingRequests() {
-        jdbc.sql("SELECT id FROM solicitacao WHERE status IN ('PENDING','PROCESSING') ORDER BY created_at")
-                .query(UUID.class).list().forEach(this::launch);
+        recoveryDuration.record(() -> jdbc.sql("SELECT id FROM solicitacao WHERE status IN ('PENDING','PROCESSING') ORDER BY created_at")
+                .query(UUID.class).list().forEach(id -> {
+                    long completed=jdbc.sql("SELECT count(*) FROM documento_gerado WHERE solicitacao_id=:id AND status='COMPLETED'")
+                            .param("id",id).query(Long.class).single();
+                    recovered.increment(); preserved.increment(completed); launch(id);
+                }));
     }
 
     private JobParameters parameters(UUID requestId) {

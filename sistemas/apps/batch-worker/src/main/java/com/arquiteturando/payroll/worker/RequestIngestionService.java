@@ -10,8 +10,8 @@ public class RequestIngestionService {
     public RequestIngestionService(JdbcClient jdbc) { this.jdbc = jdbc; }
 
     @Transactional
-    public void ingest(ExportRequestedEvent event) {
-        jdbc.sql("""
+    public boolean ingest(ExportRequestedEvent event) {
+        int inserted=jdbc.sql("""
                 INSERT INTO solicitacao(id,status,start_period,end_period,payment_types,created_at)
                 VALUES (:id,'PENDING',:start,:end,:types,:created)
                 ON CONFLICT (id) DO NOTHING
@@ -24,5 +24,6 @@ public class RequestIngestionService {
                     VALUES (:requestId,:employeeId) ON CONFLICT DO NOTHING
                     """).param("requestId", event.requestId()).param("employeeId", employeeId).update();
         }
+        return inserted == 1;
     }
 }
