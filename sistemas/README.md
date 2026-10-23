@@ -1,3 +1,6 @@
+Abra o PowerShell na pasta sistemas (cd C:\29-arquiteturando-com-azurite-mesageria-sprinbatch-angular\sistemas) e rode .\scripts\run-demo.ps1.
+
+
 # Checklist de QA manual
 
 1. Abra um PowerShell na raiz do projeto:

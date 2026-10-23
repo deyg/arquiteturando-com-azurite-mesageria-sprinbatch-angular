@@ -2,6 +2,7 @@
 param(
     [switch]$SkipBuild,
     [switch]$NoBrowser,
+    [switch]$NoPdf,
     [switch]$Stop
 )
 $ErrorActionPreference = 'Stop'
@@ -82,6 +83,14 @@ if (-not (Test-Port 4200)) {
     Set-Content -Path $angularPid -Value $ng.Id
 }
 Wait-Http 'http://127.0.0.1:4200' 120
+
+if ($NoPdf) {
+    Write-Host ''
+    Write-Host 'Tudo no ar. Use a tela: http://127.0.0.1:4200' -ForegroundColor Green
+    Write-Host 'Os serviços continuam rodando. Para encerrar: .\scripts\run-demo.ps1 -Stop' -ForegroundColor Green
+    if (-not $NoBrowser) { Start-Process 'http://127.0.0.1:4200' }
+    return
+}
 
 Write-Host '==> Gerando PDF via exportação assíncrona' -ForegroundColor Cyan
 $base = 'http://127.0.0.1:8080'
