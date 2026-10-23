@@ -3,4 +3,12 @@ server:
 management.endpoints.web.exposure.include: health
 spring:
   application.name: request-api
-  kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+        acks: all
+payroll.kafka.topic: ${PAYROLL_EXPORT_TOPIC:payroll.exports.requested.v1}
