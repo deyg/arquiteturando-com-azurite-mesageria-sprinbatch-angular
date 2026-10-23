@@ -132,6 +132,18 @@ public class BatchMonitorRepository {
     }
     private static double rate(long part,long total){return total==0?0:part/(double)total;}
 
+    public ResilienceCounts resilienceCounts(Instant from,Instant to,String jobName){
+        validateWindow(from,to);Map<String,Object> p=new HashMap<>(Map.of("from",from,"to",to));
+        String filter="";if(jobName!=null){filter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
+        return jdbc.sql("""
+                SELECT coalesce(sum(s.read_skip_count+s.process_skip_count+s.write_skip_count),0),
+                 coalesce(sum(s.rollback_count),0) FROM batch_step_execution s
+                 JOIN batch_job_execution e USING(job_execution_id) JOIN batch_job_instance i USING(job_instance_id)
+                WHERE s.create_time>=:from AND s.create_time<=:to
+                """+filter).params(p).query((rs,row)->new ResilienceCounts(rs.getLong(1),rs.getLong(2))).single();
+    }
+    public record ResilienceCounts(long skips,long rollbacks){}
+
     static void validateWindow(Instant from, Instant to) {
         if(from==null || to==null || !from.isBefore(to) || java.time.Duration.between(from,to).toDays()>31)
             throw new IllegalArgumentException("Invalid metrics window; maximum is 31 days");

@@ -14,13 +14,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/internal/v1/batch")
 public class BatchMonitorController {
     private final BatchMonitorRepository repository;
-    public BatchMonitorController(BatchMonitorRepository repository) { this.repository = repository; }
+    private final BatchMetricsService metrics;
+    public BatchMonitorController(BatchMonitorRepository repository,BatchMetricsService metrics) { this.repository = repository;this.metrics=metrics; }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    void invalid(IllegalArgumentException exception){throw new ResponseStatusException(BAD_REQUEST,exception.getMessage(),exception);}
 
     @GetMapping("/jobs")
     List<BatchJobView> jobs() { return repository.jobs(); }
@@ -59,11 +65,25 @@ public class BatchMonitorController {
     Object performance(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required=false) String jobName,@RequestParam(required=false) String stepName) {
-        return repository.performance(from,to,jobName,stepName);
+        return metrics.performance(from,to,jobName,stepName);
     }
 
     @GetMapping("/metrics/throughput")
     Object throughput(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required=false) String jobName) { return repository.throughput(from,to,jobName); }
+
+    @GetMapping("/metrics/resilience")
+    Object resilience(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required=false) String jobName){return metrics.resilience(from,to,jobName);}
+
+    @GetMapping("/metrics/dependencies") Object dependencies(){return metrics.dependencies();}
+
+    @GetMapping("/metrics/summary")
+    Object summary(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required=false) String jobName,@RequestParam(required=false) BatchStatus status){
+        return metrics.summary(from,to,jobName,status);
+    }
 }
