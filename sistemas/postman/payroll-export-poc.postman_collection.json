@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "Payroll Export POC — Contratos v0.1",
+    "description": "Collection preliminar; depende de implementacao futura das APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Listar empregados com comprovantes",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/employees?startPeriod=2026-01&endPeriod=2026-06&paymentTypes=SALARY,BENEFIT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listar pagamentos do empregado",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/employees/{{employeeId}}/payments?startPeriod=2026-01&endPeriod=2026-06",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST Solicitar exportação",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/exports",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employeeIds\": [\n    101,\n    102\n  ],\n  \"startPeriod\": \"2026-01\",\n  \"endPeriod\": \"2026-06\",\n  \"paymentTypes\": [\n    \"SALARY\",\n    \"BENEFIT\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));",
+              "const data = pm.response.json();",
+              "pm.test(\"requestId presente\", () => pm.expect(data.requestId).to.be.a(\"string\").and.not.empty);",
+              "if (data.requestId) pm.environment.set(\"requestId\", data.requestId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar histórico por filtros",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/exports?employeeId={{employeeId}}&startPeriod=2026-01&endPeriod=2026-06&page=0&size=20",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar status",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/exports/{{requestId}}",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200 (após ingestão)\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listar documentos",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/exports/{{requestId}}/documents",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "if (data.documents?.length && data.documents[0].documentId) pm.environment.set(\"documentId\", data.documents[0].documentId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Baixar PDF",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/documents/{{documentId}}/download",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"PDF\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\"));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
