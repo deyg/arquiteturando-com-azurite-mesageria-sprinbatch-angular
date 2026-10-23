@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.payroll/schemas/payroll-export-requested-v1.json",
+  "title": "PayrollExportRequestedV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventVersion", "requestId", "createdAt", "employeeIds", "startPeriod", "endPeriod", "paymentTypes"],
+  "properties": {
+    "eventVersion": { "const": 1 },
+    "requestId": { "type": "string", "format": "uuid" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "employeeIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1 } },
+    "startPeriod": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+    "endPeriod": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+    "paymentTypes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["SALARY", "BENEFIT"] } }
+  }
+}
