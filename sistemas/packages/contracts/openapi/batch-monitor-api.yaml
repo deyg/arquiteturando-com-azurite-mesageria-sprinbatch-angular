@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  title: Spring Batch Internal Monitor API
+  version: 0.1.0
+  description: Read-only operational API hosted by batch-worker. It is not exposed by the BFF.
+  license:
+    name: POC use only
+security: []
+servers:
+  - url: http://localhost:8083
+tags:
+  - name: Metadata
+  - name: Metrics
+paths:
+  /internal/v1/batch/jobs:
+    get:
+      tags: [Metadata]
+      operationId: listBatchJobs
+      summary: List known job names
+      responses:
+        '200':
+          description: Known jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BatchJob' }
+  /internal/v1/batch/executions:
+    get:
+      tags: [Metadata]
+      operationId: searchBatchExecutions
+      summary: Search job executions
+      parameters:
+        - { $ref: '#/components/parameters/JobName' }
+        - { $ref: '#/components/parameters/Status' }
+        - { $ref: '#/components/parameters/RequestIdQuery' }
+        - { $ref: '#/components/parameters/StartedFrom' }
+        - { $ref: '#/components/parameters/StartedTo' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: Paginated executions ordered by creation time descending
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchExecutionPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/executions/{executionId}:
+    get:
+      tags: [Metadata]
+      operationId: getBatchExecution
+      summary: Get one job execution
+      parameters:
+        - { $ref: '#/components/parameters/ExecutionId' }
+      responses:
+        '200':
+          description: Execution details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchExecutionDetail' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/executions/{executionId}/steps:
+    get:
+      tags: [Metadata]
+      operationId: listBatchStepExecutions
+      summary: List step executions and counters
+      parameters:
+        - { $ref: '#/components/parameters/ExecutionId' }
+      responses:
+        '200':
+          description: Step executions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BatchStepExecution' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/requests/{requestId}:
+    get:
+      tags: [Metadata]
+      operationId: correlateBatchRequest
+      summary: Correlate a business request with its Batch execution
+      parameters:
+        - { $ref: '#/components/parameters/RequestIdPath' }
+      responses:
+        '200':
+          description: Request correlation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchRequestCorrelation' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/metrics/summary:
+    get:
+      tags: [Metrics]
+      operationId: getBatchMetricsSummary
+      summary: Get consolidated performance, throughput and resilience metrics
+      parameters:
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/JobName' }
+        - { $ref: '#/components/parameters/Status' }
+      responses:
+        '200':
+          description: Consolidated metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchMetricsSummary' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/metrics/performance:
+    get:
+      tags: [Metrics]
+      operationId: getBatchPerformance
+      summary: Get duration, latency and percentile metrics
+      parameters:
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/JobName' }
+        - { $ref: '#/components/parameters/StepName' }
+      responses:
+        '200':
+          description: Performance metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PerformanceMetrics' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/metrics/throughput:
+    get:
+      tags: [Metrics]
+      operationId: getBatchThroughput
+      summary: Get processing rates and backlog
+      parameters:
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/JobName' }
+      responses:
+        '200':
+          description: Throughput metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThroughputMetrics' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/metrics/resilience:
+    get:
+      tags: [Metrics]
+      operationId: getBatchResilience
+      summary: Get retry, failure and recovery metrics
+      parameters:
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/JobName' }
+      responses:
+        '200':
+          description: Resilience metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResilienceMetrics' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /internal/v1/batch/metrics/dependencies:
+    get:
+      tags: [Metrics]
+      operationId: getBatchDependencies
+      summary: Get observed dependency status
+      responses:
+        '200':
+          description: Dependency observations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DependencyMetric' }
+components:
+  parameters:
+    ExecutionId: { name: executionId, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    RequestIdPath: { name: requestId, in: path, required: true, schema: { type: string, format: uuid } }
+    RequestIdQuery: { name: requestId, in: query, schema: { type: string, format: uuid } }
+    JobName: { name: jobName, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
+    StepName: { name: stepName, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
+    Status: { name: status, in: query, schema: { $ref: '#/components/schemas/BatchStatus' } }
+    StartedFrom: { name: startedFrom, in: query, schema: { type: string, format: date-time } }
+    StartedTo: { name: startedTo, in: query, schema: { type: string, format: date-time } }
+    From: { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+    To: { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+    Size: { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+  schemas:
+    BatchStatus: { type: string, enum: [COMPLETED, STARTING, STARTED, STOPPING, STOPPED, FAILED, ABANDONED, UNKNOWN] }
+    MetricWindow:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+    BatchJob:
+      type: object
+      required: [jobName]
+      properties:
+        jobName: { type: string }
+        instanceCount: { type: integer, format: int64, minimum: 0 }
+        latestExecutionId: { type: integer, format: int64, minimum: 1 }
+        latestStatus: { $ref: '#/components/schemas/BatchStatus' }
+        latestStartTime: { type: [string, 'null'], format: date-time }
+    BatchExecutionSummary:
+      type: object
+      required: [jobName, jobInstanceId, jobExecutionId, status, createTime]
+      properties:
+        jobName: { type: string }
+        jobInstanceId: { type: integer, format: int64 }
+        jobExecutionId: { type: integer, format: int64 }
+        requestId: { type: [string, 'null'], format: uuid }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+        createTime: { type: string, format: date-time }
+        startTime: { type: [string, 'null'], format: date-time }
+        endTime: { type: [string, 'null'], format: date-time }
+        durationMs: { type: [integer, 'null'], format: int64, minimum: 0 }
+        exitCode: { type: [string, 'null'] }
+    BatchExecutionDetail:
+      allOf:
+        - { $ref: '#/components/schemas/BatchExecutionSummary' }
+        - type: object
+          required: [parameters, steps]
+          properties:
+            lastUpdated: { type: [string, 'null'], format: date-time }
+            exitDescription: { type: [string, 'null'], maxLength: 4000 }
+            parameters:
+              type: object
+              additionalProperties: { type: string }
+            steps:
+              type: array
+              items: { $ref: '#/components/schemas/BatchStepExecution' }
+    BatchStepExecution:
+      type: object
+      required: [stepExecutionId, stepName, status, readCount, writeCount, filterCount, skipCount, commitCount, rollbackCount]
+      properties:
+        stepExecutionId: { type: integer, format: int64 }
+        stepName: { type: string }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+        startTime: { type: [string, 'null'], format: date-time }
+        endTime: { type: [string, 'null'], format: date-time }
+        durationMs: { type: [integer, 'null'], format: int64, minimum: 0 }
+        readCount: { type: integer, format: int64, minimum: 0 }
+        writeCount: { type: integer, format: int64, minimum: 0 }
+        filterCount: { type: integer, format: int64, minimum: 0 }
+        skipCount: { type: integer, format: int64, minimum: 0 }
+        readSkipCount: { type: integer, format: int64, minimum: 0 }
+        processSkipCount: { type: integer, format: int64, minimum: 0 }
+        writeSkipCount: { type: integer, format: int64, minimum: 0 }
+        commitCount: { type: integer, format: int64, minimum: 0 }
+        rollbackCount: { type: integer, format: int64, minimum: 0 }
+        exitCode: { type: [string, 'null'] }
+        exitDescription: { type: [string, 'null'], maxLength: 4000 }
+    BatchRequestCorrelation:
+      type: object
+      required: [requestId, requestStatus, executions]
+      properties:
+        requestId: { type: string, format: uuid }
+        requestStatus: { type: string, enum: [PENDING, PROCESSING, COMPLETED, PARTIAL, FAILED] }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        totalDocuments: { type: integer, format: int64, minimum: 0 }
+        completedDocuments: { type: integer, format: int64, minimum: 0 }
+        failedDocuments: { type: integer, format: int64, minimum: 0 }
+        executions:
+          type: array
+          items: { $ref: '#/components/schemas/BatchExecutionSummary' }
+    PerformanceMetrics:
+      type: object
+      required: [window, sampleCount]
+      properties:
+        window: { $ref: '#/components/schemas/MetricWindow' }
+        sampleCount: { type: integer, format: int64, minimum: 0 }
+        averageJobDurationMs: { type: number, format: double, minimum: 0 }
+        minJobDurationMs: { type: integer, format: int64, minimum: 0 }
+        maxJobDurationMs: { type: integer, format: int64, minimum: 0 }
+        p50JobDurationMs: { type: number, format: double, minimum: 0 }
+        p95JobDurationMs: { type: number, format: double, minimum: 0 }
+        p99JobDurationMs: { type: number, format: double, minimum: 0 }
+        averagePdfLatencyMs: { type: number, format: double, minimum: 0 }
+        p95PdfLatencyMs: { type: number, format: double, minimum: 0 }
+        averageBlobLatencyMs: { type: number, format: double, minimum: 0 }
+        averageSqlLatencyMs: { type: number, format: double, minimum: 0 }
+        averageQueueTimeMs: { type: number, format: double, minimum: 0 }
+        averageEndToEndTimeMs: { type: number, format: double, minimum: 0 }
+    ThroughputMetrics:
+      type: object
+      required: [window, jobsStarted, jobsCompleted, jobsFailed, jobsPartial, jobsRunning, documentsRead, documentsCompleted, documentsFailed, backlog]
+      properties:
+        window: { $ref: '#/components/schemas/MetricWindow' }
+        jobsStarted: { type: integer, format: int64, minimum: 0 }
+        jobsCompleted: { type: integer, format: int64, minimum: 0 }
+        jobsFailed: { type: integer, format: int64, minimum: 0 }
+        jobsPartial: { type: integer, format: int64, minimum: 0 }
+        jobsRunning: { type: integer, format: int64, minimum: 0 }
+        documentsRead: { type: integer, format: int64, minimum: 0 }
+        documentsCompleted: { type: integer, format: int64, minimum: 0 }
+        documentsFailed: { type: integer, format: int64, minimum: 0 }
+        documentsPerSecond: { type: number, format: double, minimum: 0 }
+        successRate: { type: number, format: double, minimum: 0, maximum: 1 }
+        failureRate: { type: number, format: double, minimum: 0, maximum: 1 }
+        partialRate: { type: number, format: double, minimum: 0, maximum: 1 }
+        backlog: { type: integer, format: int64, minimum: 0 }
+    ResilienceMetrics:
+      type: object
+      required: [window, pdfRetries, pdfFailures, blobRetries, sqlFailuresAfterUpload, skippedItems, rollbacks, kafkaRedeliveries, recoveredJobs, preservedDocuments]
+      properties:
+        window: { $ref: '#/components/schemas/MetricWindow' }
+        pdfRetries: { type: integer, format: int64, minimum: 0 }
+        pdfFailures: { type: integer, format: int64, minimum: 0 }
+        blobRetries: { type: integer, format: int64, minimum: 0 }
+        sqlFailuresAfterUpload: { type: integer, format: int64, minimum: 0 }
+        skippedItems: { type: integer, format: int64, minimum: 0 }
+        rollbacks: { type: integer, format: int64, minimum: 0 }
+        kafkaRedeliveries: { type: integer, format: int64, minimum: 0 }
+        recoveredJobs: { type: integer, format: int64, minimum: 0 }
+        preservedDocuments: { type: integer, format: int64, minimum: 0 }
+        averageRecoveryTimeMs: { type: number, format: double, minimum: 0 }
+    DependencyMetric:
+      type: object
+      required: [dependency, status, observedAt]
+      properties:
+        dependency: { type: string, enum: [POSTGRESQL, KAFKA, PDF_MOTOR, AZURITE] }
+        status: { type: string, enum: [UP, DOWN, DEGRADED, UNKNOWN] }
+        observedAt: { type: string, format: date-time }
+        latencyMs: { type: [number, 'null'], format: double, minimum: 0 }
+        lastHealthyAt: { type: [string, 'null'], format: date-time }
+    BatchMetricsSummary:
+      type: object
+      required: [window, performance, throughput, resilience, dependencies]
+      properties:
+        window: { $ref: '#/components/schemas/MetricWindow' }
+        performance: { $ref: '#/components/schemas/PerformanceMetrics' }
+        throughput: { $ref: '#/components/schemas/ThroughputMetrics' }
+        resilience: { $ref: '#/components/schemas/ResilienceMetrics' }
+        dependencies:
+          type: array
+          items: { $ref: '#/components/schemas/DependencyMetric' }
+    BatchExecutionPage:
+      type: object
+      required: [items, page, size, totalElements, totalPages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/BatchExecutionSummary' }
+        page: { type: integer, minimum: 0 }
+        size: { type: integer, minimum: 1, maximum: 100 }
+        totalElements: { type: integer, format: int64, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+    Problem:
+      type: object
+      required: [status, title]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
+  responses:
+    Problem:
+      description: Problem details
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
