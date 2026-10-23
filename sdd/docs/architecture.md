@@ -7,6 +7,8 @@ Angular :4200 -> BFF :8080 -> Request API :8081 -> Kafka :9092
 Kafka -> Batch Worker :8083 -> PDF Motor :8084
              |              -> Azurite
              +--------------> PostgreSQL
+             +--------------> Monitor interno /internal/v1/batch
+                              -> JobRepository + Micrometer
 ```
 
 ## Fronteiras
@@ -19,6 +21,7 @@ Kafka -> Batch Worker :8083 -> PDF Motor :8084
 | Query API | PostgreSQL, Azurite | Kafka, PDF Motor |
 | Batch Worker | Kafka, PostgreSQL, PDF Motor, Azurite | estado do navegador |
 | PDF Motor | payload HTTP | banco, Kafka, Azurite |
+| Monitor Spring Batch | JobRepository, metadados do domínio e Micrometer | BFF, Angular, comandos de alteração de jobs |
 
 ## Fluxo assíncrono
 
@@ -31,3 +34,13 @@ Kafka -> Batch Worker :8083 -> PDF Motor :8084
 ## Consistência
 
 Não existe transação distribuída. PostgreSQL, Kafka, HTTP e Azurite são reconciliados por IDs estáveis, constraints, retry finito e varredura de pendências.
+
+## Observabilidade técnica planejada
+
+O `batch-worker` hospedará o `monitor-springbatch` na porta `8083`. A feature será interna e somente leitura, combinando:
+
+- `JobRepository` para instâncias, execuções, parâmetros, steps e contadores históricos;
+- domínio PostgreSQL para correlação por `requestId` e backlog;
+- Micrometer para timers, counters, gauges, histogramas, percentis e scrape Prometheus.
+
+O histórico funcional continua pertencendo à Query API. O monitor técnico não será exposto pelo BFF. Ver [SPEC-002](spec-002-monitor-springbatch.md) e [ADR-004](../adr/ADR-004-batch-monitor-observability.md).

@@ -61,6 +61,14 @@ cd sistemas
 - Contratos e cURLs: [docs/local-api.md](docs/local-api.md).
 - Arquitetura detalhada: [docs/architecture.md](docs/architecture.md).
 - Rastreabilidade e resultado final: [docs/release-report.md](docs/release-report.md).
+- Evolução aprovada do monitor: [docs/spec-002-monitor-springbatch.md](docs/spec-002-monitor-springbatch.md).
+- Plano de implementação: [docs/plan-002-monitor-springbatch.md](docs/plan-002-monitor-springbatch.md).
+- Contrato interno planejado: [docs/monitor-springbatch-api.md](docs/monitor-springbatch-api.md).
+- Decisão de observabilidade: [adr/ADR-004-batch-monitor-observability.md](adr/ADR-004-batch-monitor-observability.md).
+
+## Evolução aprovada
+
+A `SPEC-002` adicionará ao `batch-worker` o `monitor-springbatch`: API interna e somente leitura para metadados do `JobRepository`, performance, vazão e resiliência, complementada por Micrometer/Prometheus. A especificação está aprovada; os passos M-01 a M-14 ainda não foram implementados.
 
 ## Limitações conhecidas
 

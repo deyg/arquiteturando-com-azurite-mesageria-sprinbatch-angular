@@ -40,3 +40,7 @@ Os relatórios detalhados de cada passo estão em `sdd/progress/P-00.md` a `P-20
 - testes de carga, alta disponibilidade e recuperação de desastre.
 
 Avisos não bloqueantes observados: APIs `JobLauncher`/`JobExplorer` marcadas para remoção futura pelo Spring Batch, autoanexação do agente Mockito que mudará em JDK futuro e versões Netty divergentes reportadas pelo SDK Azure. Nenhum deles causou falha funcional ou de build nesta versão.
+
+## Evolução posterior ao release
+
+A [SPEC-002](spec-002-monitor-springbatch.md) foi aprovada para adicionar observabilidade técnica ao `batch-worker`. Ela introduz RF-19 a RF-28, RNF-10 a RNF-20 e AC-14 a AC-27, cobrindo metadados, performance, vazão e resiliência. Este relatório continua representando o release P-00–P-20; a nova feature permanece planejada e sem evidência de implementação.
