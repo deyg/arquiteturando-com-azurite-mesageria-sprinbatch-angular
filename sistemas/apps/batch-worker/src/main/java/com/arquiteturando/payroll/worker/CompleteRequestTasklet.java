@@ -16,9 +16,16 @@ public class CompleteRequestTasklet implements Tasklet {
                                 org.springframework.batch.core.scope.context.ChunkContext context) {
         UUID id = UUID.fromString(context.getStepContext().getJobParameters().get("requestId").toString());
         jdbc.sql("""
-                UPDATE solicitacao s SET status='COMPLETED',completed_at=CURRENT_TIMESTAMP,
+                UPDATE solicitacao s SET
+                  status=CASE
+                    WHEN (SELECT count(*) FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='FAILED')=0 THEN 'COMPLETED'
+                    WHEN (SELECT count(*) FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='COMPLETED')>0 THEN 'PARTIAL'
+                    ELSE 'FAILED' END,
+                  completed_at=CURRENT_TIMESTAMP,
                   completed_documents=(SELECT count(*) FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='COMPLETED'),
-                  failed_documents=(SELECT count(*) FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='FAILED')
+                  failed_documents=(SELECT count(*) FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='FAILED'),
+                  error_message=CASE WHEN EXISTS (SELECT 1 FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='FAILED')
+                    THEN 'Um ou mais documentos esgotaram as tentativas' ELSE NULL END
                 WHERE s.id=:id
                 """).param("id", id).update();
         return RepeatStatus.FINISHED;

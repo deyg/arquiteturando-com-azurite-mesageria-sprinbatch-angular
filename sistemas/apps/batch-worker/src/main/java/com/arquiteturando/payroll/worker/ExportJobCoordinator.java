@@ -33,8 +33,7 @@ public class ExportJobCoordinator {
         JobParameters parameters = parameters(requestId);
         var instance = explorer.getJobInstance(job.getName(), parameters);
         if (instance != null && explorer.getJobExecutions(instance).stream()
-                .anyMatch(execution -> execution.isRunning() || execution.getStatus().isUnsuccessful()
-                        || execution.getStatus().name().equals("COMPLETED"))) {
+                .anyMatch(execution -> execution.isRunning() || execution.getStatus().name().equals("COMPLETED"))) {
             log.info("job_launch_skipped requestId={} reason=existing_execution", requestId);
             return;
         }
@@ -49,7 +48,7 @@ public class ExportJobCoordinator {
 
     @EventListener(ApplicationReadyEvent.class)
     public void recoverPendingRequests() {
-        jdbc.sql("SELECT id FROM solicitacao WHERE status='PENDING' ORDER BY created_at")
+        jdbc.sql("SELECT id FROM solicitacao WHERE status IN ('PENDING','PROCESSING') ORDER BY created_at")
                 .query(UUID.class).list().forEach(this::launch);
     }
 

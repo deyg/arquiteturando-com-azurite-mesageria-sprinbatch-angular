@@ -53,10 +53,14 @@ public class BatchJobConfiguration {
 
     @Bean
     Step generateDocumentsStep(JobRepository repository, JdbcCursorItemReader<PaymentDocument> pendingDocumentReader,
-                               PdfMotorClient processor, DocumentWriter writer) {
+                               PdfMotorClient processor, DocumentWriter writer,
+                               DocumentFailureListener failureListener) {
         return new StepBuilder("generateDocumentsStep", repository)
                 .<PaymentDocument, PaymentDocument>chunk(1)
-                .reader(pendingDocumentReader).processor(processor::render).writer(writer).build();
+                .reader(pendingDocumentReader).processor(processor::render).writer(writer)
+                .faultTolerant().retry(RuntimeException.class).retryLimit(2)
+                .skip(RuntimeException.class).skipLimit(Integer.MAX_VALUE)
+                .listener(failureListener).build();
     }
 
     @Bean
