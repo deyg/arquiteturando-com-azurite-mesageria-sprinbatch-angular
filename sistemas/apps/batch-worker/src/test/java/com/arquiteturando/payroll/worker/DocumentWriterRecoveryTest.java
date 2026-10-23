@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.infrastructure.item.Chunk;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentWriterRecoveryTest {
@@ -31,7 +32,7 @@ class DocumentWriterRecoveryTest {
         doThrow(new IllegalStateException("injected SQL failure"))
                 .doNothing().when(documents).complete(org.mockito.ArgumentMatchers.eq(documentId),
                         org.mockito.ArgumentMatchers.eq(blobName), org.mockito.ArgumentMatchers.anyString());
-        var writer = new DocumentWriter(storage, documents);
+        var writer = new DocumentWriter(storage, documents, new SimpleMeterRegistry());
 
         assertThatThrownBy(() -> writer.write(new Chunk<>(item)))
                 .hasMessageContaining("injected SQL failure");
