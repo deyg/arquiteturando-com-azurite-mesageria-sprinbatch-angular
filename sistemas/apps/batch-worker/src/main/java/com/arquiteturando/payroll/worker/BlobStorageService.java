@@ -20,7 +20,7 @@ public class BlobStorageService {
         this.container = new BlobContainerClientBuilder()
                 .connectionString(connectionString).containerName(containerName).buildClient();
         this.container.createIfNotExists();
-        this.uploadDuration=Timer.builder("payroll.batch.blob.duration").publishPercentileHistogram().register(metrics);
+        this.uploadDuration=Timer.builder("payroll.batch.blob.duration").publishPercentiles(.5,.95,.99).publishPercentileHistogram().register(metrics);
         this.retries=metrics.counter("payroll.batch.blob.retries");
     }
 

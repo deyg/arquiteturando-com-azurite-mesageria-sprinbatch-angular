@@ -16,7 +16,7 @@ public class PdfMotorClient {
 
     public PdfMotorClient(@Value("${payroll.pdf-motor.url}") String url, MeterRegistry metrics) {
         this.client = RestClient.builder().baseUrl(url).build();
-        this.duration=Timer.builder("payroll.batch.pdf.duration").publishPercentileHistogram().register(metrics);
+        this.duration=Timer.builder("payroll.batch.pdf.duration").publishPercentiles(.5,.95,.99).publishPercentileHistogram().register(metrics);
         this.failures=metrics.counter("payroll.batch.pdf.failures");
         this.retries=metrics.counter("payroll.batch.pdf.retries");
     }

@@ -92,7 +92,7 @@ public class BatchMonitorRepository {
 
     public PerformanceMetrics performance(Instant from, Instant to, String jobName, String stepName) {
         validateWindow(from,to);
-        Map<String,Object> p=new HashMap<>(Map.of("from",from,"to",to));
+        Map<String,Object> p=windowParams(from,to);
         String jobFilter=""; if(jobName!=null){jobFilter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
         String source=" FROM batch_job_execution e JOIN batch_job_instance i USING(job_instance_id)";
         String stepFilter="";
@@ -111,7 +111,7 @@ public class BatchMonitorRepository {
     }
 
     public ThroughputMetrics throughput(Instant from, Instant to, String jobName) {
-        validateWindow(from,to); Map<String,Object> p=new HashMap<>(Map.of("from",from,"to",to));
+        validateWindow(from,to); Map<String,Object> p=windowParams(from,to);
         String filter=""; if(jobName!=null){filter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
         long[] jobs=jdbc.sql("""
                 SELECT count(*),count(*) filter(where e.status='COMPLETED'),count(*) filter(where e.status='FAILED'),
@@ -124,7 +124,7 @@ public class BatchMonitorRepository {
                  coalesce(sum(completed_documents),0),coalesce(sum(failed_documents),0),
                  count(*) filter(where status in ('PENDING','PROCESSING'))
                 FROM solicitacao WHERE created_at>=:from AND created_at<=:to
-                """).params(Map.of("from",from,"to",to)).query((rs,row)->new long[]{rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),rs.getLong(5)}).single();
+                """).params(windowParams(from,to)).query((rs,row)->new long[]{rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),rs.getLong(5)}).single();
         long finalized=jobs[1]+jobs[2]; double seconds=Math.max(1,java.time.Duration.between(from,to).toMillis()/1000d);
         return new ThroughputMetrics(new MetricWindow(from,to),jobs[0],jobs[1],jobs[2],domain[0],jobs[3],domain[1],
                 domain[2],domain[3],domain[2]/seconds,rate(jobs[1],finalized),rate(jobs[2],finalized),
@@ -133,7 +133,7 @@ public class BatchMonitorRepository {
     private static double rate(long part,long total){return total==0?0:part/(double)total;}
 
     public ResilienceCounts resilienceCounts(Instant from,Instant to,String jobName){
-        validateWindow(from,to);Map<String,Object> p=new HashMap<>(Map.of("from",from,"to",to));
+        validateWindow(from,to);Map<String,Object> p=windowParams(from,to);
         String filter="";if(jobName!=null){filter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
         return jdbc.sql("""
                 SELECT coalesce(sum(s.read_skip_count+s.process_skip_count+s.write_skip_count),0),
@@ -143,6 +143,9 @@ public class BatchMonitorRepository {
                 """+filter).params(p).query((rs,row)->new ResilienceCounts(rs.getLong(1),rs.getLong(2))).single();
     }
     public record ResilienceCounts(long skips,long rollbacks){}
+    private static Map<String,Object> windowParams(Instant from,Instant to){
+        return new HashMap<>(Map.of("from",java.sql.Timestamp.from(from),"to",java.sql.Timestamp.from(to)));
+    }
 
     static void validateWindow(Instant from, Instant to) {
         if(from==null || to==null || !from.isBefore(to) || java.time.Duration.between(from,to).toDays()>31)
@@ -199,6 +202,6 @@ public class BatchMonitorRepository {
 
     private static void condition(StringBuilder sql, Map<String, Object> params, boolean include,
             String fragment, String name, Object value) {
-        if (include) { sql.append(fragment); params.put(name, value); }
+        if (include) { sql.append(fragment); params.put(name, value instanceof Instant i ? java.sql.Timestamp.from(i) : value); }
     }
 }
