@@ -2,3 +2,6 @@ server:
   port: ${BFF_PORT:8080}
 management.endpoints.web.exposure.include: health
 spring.application.name: bff-api
+payroll.services:
+  request-api: ${REQUEST_API_URL:http://127.0.0.1:8081}
+  query-api: ${QUERY_API_URL:http://127.0.0.1:8082}
