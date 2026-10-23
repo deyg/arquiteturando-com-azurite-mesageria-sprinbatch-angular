@@ -10,3 +10,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+payroll.storage:
+  connection-string: ${AZURITE_CONNECTION_STRING:UseDevelopmentStorage=true}
+  container: ${AZURITE_CONTAINER:payroll-documents}
