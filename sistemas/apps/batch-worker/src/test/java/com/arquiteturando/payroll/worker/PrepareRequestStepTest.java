@@ -1,14 +1,18 @@
 package com.arquiteturando.payroll.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = "spring.kafka.listener.auto-startup=false")
@@ -17,6 +21,13 @@ class PrepareRequestStepTest {
     @Autowired ExportJobCoordinator coordinator;
     @Autowired JdbcClient jdbc;
     @Autowired BlobStorageService storage;
+    @MockitoBean PdfMotorClient pdfMotor;
+
+    @BeforeEach
+    void renderPdf() {
+        when(pdfMotor.render(any())).thenAnswer(invocation ->
+                ((PaymentDocument) invocation.getArgument(0)).withPdf("%PDF-test".getBytes()));
+    }
 
     @Test
     void requestWithoutPaymentsCompletesWithZeroDocuments() {

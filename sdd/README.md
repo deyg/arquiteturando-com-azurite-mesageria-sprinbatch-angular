@@ -1,45 +1,70 @@
-# Payroll Export POC — Pacote SDD v0.1
+# Payroll Export POC
 
-**Estado: documentação aprovada em 2026-10-23; implementação ainda não iniciada.**
+**Estado: implementação e verificação concluídas em 2026-10-23.**
 
-Conteúdo:
+A POC exporta comprovantes de pagamento de forma assíncrona. O navegador apenas solicita e consulta; Kafka, Spring Batch, PostgreSQL e Azurite preservam o trabalho depois que a tela é fechada.
 
-- `docs/constitution.md`: missão, princípios vinculantes, stack, limites, transações, governança.
-- `docs/spec-001.md`: regras de negócio, requisitos rastreáveis, fluxos, APIs preliminares, eventos e Gherkin.
-- `../sistemas/postman/payroll-export-poc.postman_collection.json`: Collection Postman preliminar dos endpoints propostos.
-- `../sistemas/postman/local.postman_environment.json`: Variáveis locais de API e IDs de exemplo.
+## Componentes e portas
 
-## Como usar no SDD/Codex
+| Componente | Porta | Responsabilidade |
+|---|---:|---|
+| Angular | 4200 | seleção, solicitação e histórico manual |
+| BFF | 8080 | única API consumida pelo Angular |
+| Request API | 8081 | validação, publicação Kafka e resposta `202` |
+| Query API | 8082 | consultas e stream de downloads |
+| Batch Worker | 8083 | consumo idempotente, job e recuperação |
+| PDF Motor | 8084 | renderização HTTP de PDF |
+| Kafka | 9092 | evento versionado de solicitação |
+| PostgreSQL | 5432 | domínio, estado e metadados Spring Batch |
+| Azurite Blob | 10000 | conteúdo binário dos PDFs |
 
-1. Revise primeiro `docs/constitution.md` e `docs/spec-001.md`.
-2. A documentação foi aprovada; preserve o modo supervisionado e execute somente a etapa autorizada.
-3. Após autorização específica, avance para `DOMAIN-001`, `ARCH-001`, `API-001`, `PLAN-001` e `TASKS-001`.
-4. Implemente apenas após aprovar o Playbook, um passo rastreável por vez.
+```text
+Angular -> BFF -> Request API -> Kafka -> Batch Worker -> PDF Motor
+             \-> Query API                 |  |  |
+                    |                       |  |  +-> Azurite
+                    +-> PostgreSQL/Azurite  |  +----> PostgreSQL
+                                            +-------> recuperação no restart
+```
 
-## Recursos locais previstos
+## Execução local no Windows
 
-Java 21 · Spring Boot 4.1.x · Spring Batch 6.0.x · Angular 22 · Kafka 4.3.1 KRaft · PostgreSQL · Azurite Blob · Maven · Node.js compatível.
+Pré-requisitos: Java 21, Maven Wrapper, PostgreSQL, Kafka KRaft, Azurite e Node.js compatível com Angular 22. Não há Docker nem credenciais Azure.
 
-> Nenhuma aplicação está implementada neste pacote. cURLs e Collection definem os contratos alvo, portanto só funcionarão depois dos respectivos serviços estarem em execução.
+```powershell
+cd sistemas
+.\scripts\check-prereqs.ps1
+.\scripts\start-local.ps1
+.\scripts\smoke.ps1
+.\scripts\e2e.ps1
+```
 
-## Tabela rápida de cURL (contratos previstos)
+Para a UI:
 
-| Ação | cURL |
-|---|---|
-| Empregados | `curl "http://localhost:8080/api/v1/employees?startPeriod=2026-01&endPeriod=2026-06&paymentTypes=SALARY,BENEFIT"` |
-| Pagamentos | `curl "http://localhost:8080/api/v1/employees/101/payments?startPeriod=2026-01&endPeriod=2026-06"` |
-| Exportar | `curl -X POST http://localhost:8080/api/v1/exports -H "Content-Type: application/json" -d '{"employeeIds":[101,102],"startPeriod":"2026-01","endPeriod":"2026-06","paymentTypes":["SALARY","BENEFIT"]}'` (Git Bash) |
-| Histórico | `curl "http://localhost:8080/api/v1/exports?employeeId=101&startPeriod=2026-01&endPeriod=2026-06&page=0&size=20"` |
-| Status | `curl "http://localhost:8080/api/v1/exports/{requestId}"` |
-| Listar documentos | `curl "http://localhost:8080/api/v1/exports/{requestId}/documents"` |
-| PDF | `curl -L -o comprovante.pdf "http://localhost:8080/api/v1/documents/{documentId}/download"` |
+```powershell
+cd sistemas\apps\web-angular
+npm install
+npm start
+```
 
-No Postman, `Consultar histórico por filtros` pode ser executado sem `requestId`. Para as consultas de status e documentos, execute antes `POST Solicitar exportação`; o script de teste captura o `requestId` do retorno 202. Os IDs dos exemplos são variáveis substituíveis.
+Ao terminar, pare somente os processos registrados pelo iniciador:
 
-## Documentação oficial
+```powershell
+cd sistemas
+.\scripts\stop-local.ps1
+```
 
-- https://docs.spring.io/spring-boot/reference/
-- https://docs.spring.io/spring-batch/reference/
-- https://angular.dev/reference/versions
-- https://kafka.apache.org/community/downloads/
-- https://learn.microsoft.com/en-us/azure/storage/common/storage-install-azurite
+## Operação e testes
+
+- API pública: `http://127.0.0.1:8080`.
+- Health checks: `/actuator/health` em cada aplicação Java.
+- Coleção Postman: `sistemas/postman/payroll-export-poc.postman_collection.json`.
+- Contratos e cURLs: [docs/local-api.md](docs/local-api.md).
+- Arquitetura detalhada: [docs/architecture.md](docs/architecture.md).
+- Rastreabilidade e resultado final: [docs/release-report.md](docs/release-report.md).
+
+## Limitações conhecidas
+
+- POC local e monoestação; autenticação, autorização e TLS não foram incluídos.
+- O Angular não faz polling automático por decisão arquitetural; a atualização do histórico é manual.
+- Não há transação distribuída entre Kafka, PostgreSQL, HTTP e Blob. A consistência é obtida por IDs determinísticos, constraints, retry finito e reconciliação.
+- O script de start pressupõe que PostgreSQL, Kafka e Azurite já estejam ativos; o preflight informa o que falta.
