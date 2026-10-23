@@ -9,6 +9,7 @@ import com.arquiteturando.payroll.worker.monitor.dto.BatchRequestCorrelation;
 import com.arquiteturando.payroll.worker.monitor.dto.PageResponse;
 import com.arquiteturando.payroll.worker.monitor.dto.PerformanceMetrics;
 import com.arquiteturando.payroll.worker.monitor.dto.MetricWindow;
+import com.arquiteturando.payroll.worker.monitor.dto.ThroughputMetrics;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -108,6 +109,28 @@ public class BatchMonitorRepository {
                 rs.getDouble(2),rs.getLong(3),rs.getLong(4),rs.getDouble(5),rs.getDouble(6),rs.getDouble(7),
                 0,0,0,0,0,0)).single();
     }
+
+    public ThroughputMetrics throughput(Instant from, Instant to, String jobName) {
+        validateWindow(from,to); Map<String,Object> p=new HashMap<>(Map.of("from",from,"to",to));
+        String filter=""; if(jobName!=null){filter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
+        long[] jobs=jdbc.sql("""
+                SELECT count(*),count(*) filter(where e.status='COMPLETED'),count(*) filter(where e.status='FAILED'),
+                 count(*) filter(where e.status in ('STARTING','STARTED','STOPPING'))
+                FROM batch_job_execution e JOIN batch_job_instance i USING(job_instance_id)
+                WHERE e.create_time>=:from AND e.create_time<=:to
+                """+filter).params(p).query((rs,row)->new long[]{rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4)}).single();
+        long[] domain=jdbc.sql("""
+                SELECT count(*) filter(where status='PARTIAL'),coalesce(sum(total_documents),0),
+                 coalesce(sum(completed_documents),0),coalesce(sum(failed_documents),0),
+                 count(*) filter(where status in ('PENDING','PROCESSING'))
+                FROM solicitacao WHERE created_at>=:from AND created_at<=:to
+                """).params(Map.of("from",from,"to",to)).query((rs,row)->new long[]{rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),rs.getLong(5)}).single();
+        long finalized=jobs[1]+jobs[2]; double seconds=Math.max(1,java.time.Duration.between(from,to).toMillis()/1000d);
+        return new ThroughputMetrics(new MetricWindow(from,to),jobs[0],jobs[1],jobs[2],domain[0],jobs[3],domain[1],
+                domain[2],domain[3],domain[2]/seconds,rate(jobs[1],finalized),rate(jobs[2],finalized),
+                rate(domain[0],finalized+domain[0]),domain[4]);
+    }
+    private static double rate(long part,long total){return total==0?0:part/(double)total;}
 
     static void validateWindow(Instant from, Instant to) {
         if(from==null || to==null || !from.isBefore(to) || java.time.Duration.between(from,to).toDays()>31)

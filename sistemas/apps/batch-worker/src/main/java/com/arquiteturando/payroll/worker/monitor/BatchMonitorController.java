@@ -61,4 +61,9 @@ public class BatchMonitorController {
             @RequestParam(required=false) String jobName,@RequestParam(required=false) String stepName) {
         return repository.performance(from,to,jobName,stepName);
     }
+
+    @GetMapping("/metrics/throughput")
+    Object throughput(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required=false) String jobName) { return repository.throughput(from,to,jobName); }
 }
