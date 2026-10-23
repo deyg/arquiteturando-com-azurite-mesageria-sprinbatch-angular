@@ -1,0 +1,4 @@
+server:
+  port: ${PDF_MOTOR_PORT:8084}
+management.endpoints.web.exposure.include: health
+spring.application.name: pdf-motor-api
