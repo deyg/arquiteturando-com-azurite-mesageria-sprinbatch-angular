@@ -30,4 +30,4 @@ Plano detalhado: [PLAN-002](plan-002-monitor-springbatch.md).
 | M-13 | Postman e QA manual | execução reproduzível |
 | M-14 | Regressão e relatório | Maven, E2E e matriz de evidências |
 
-Cada passo M deve produzir teste, evidência em `sdd/progress/` e um commit dedicado. A implementação ainda não foi iniciada.
+Cada passo M produziu evidência em `sdd/progress/` e commit dedicado. A implementação foi concluída e verificada em 2026-10-23.

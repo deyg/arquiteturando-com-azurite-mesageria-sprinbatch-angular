@@ -42,7 +42,8 @@ class PartialFailureRecoveryTest {
 
         assertThat(requestStatus(id)).isEqualTo("PARTIAL");
         assertThat(documentStatuses(id)).containsExactlyInAnyOrder("COMPLETED", "FAILED");
-        verify(pdfMotor, times(3)).render(org.mockito.ArgumentMatchers.argThat(item -> item.paymentId() == 501));
+        verify(pdfMotor, times(3)).render(org.mockito.ArgumentMatchers.argThat(
+                item -> item.requestId().equals(id) && item.paymentId() == 501));
     }
 
     @Test

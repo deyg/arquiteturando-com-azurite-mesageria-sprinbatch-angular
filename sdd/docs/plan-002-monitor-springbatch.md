@@ -4,7 +4,7 @@
 |---|---|
 | Especificação | [SPEC-002](spec-002-monitor-springbatch.md) |
 | Decisão | [ADR-004](../adr/ADR-004-batch-monitor-observability.md) |
-| Estado | APROVADO; implementação não iniciada |
+| Estado | CONCLUÍDO |
 
 ## Estratégia
 

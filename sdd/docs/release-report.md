@@ -43,4 +43,14 @@ Avisos não bloqueantes observados: APIs `JobLauncher`/`JobExplorer` marcadas pa
 
 ## Evolução posterior ao release
 
-A [SPEC-002](spec-002-monitor-springbatch.md) foi aprovada para adicionar observabilidade técnica ao `batch-worker`. Ela introduz RF-19 a RF-28, RNF-10 a RNF-20 e AC-14 a AC-27, cobrindo metadados, performance, vazão e resiliência. Este relatório continua representando o release P-00–P-20; a nova feature permanece planejada e sem evidência de implementação.
+A [SPEC-002](spec-002-monitor-springbatch.md) adicionou observabilidade técnica ao `batch-worker`, cobrindo RF-19 a RF-28, RNF-10 a RNF-20 e AC-14 a AC-27.
+
+| Faixa | Evidência | Commits |
+|---|---|---|
+| Contrato e metadados | OpenAPI, DTOs, JobRepository JDBC, paginação, detalhes e correlação | `b958ffc` a `3c75ee4` |
+| Performance e vazão | duração, percentis, taxas, backlog e ativos | `6aae1f1`, `3a17dd1` |
+| Resiliência | PDF, Blob, SQL, Kafka, redelivery e recuperação | `4de0d29` a `2292bcd` |
+| Exposição | Prometheus e endpoints consolidados | `c0e0192`, `f6ea71c` |
+| Operação | baseline, Postman e QA | `2c1f35d`, `f030fbe` |
+
+Baseline com 5 solicitações: 2,082 solicitações/s; job médio 188,286 ms; p95 504,589 ms; sucesso 100% e backlog zero. Validação HTTP encontrou 1 job, 24 execuções persistidas, três steps por execução, correlação por UUID e métricas Prometheus. Gate final: 6/6 módulos Maven e 22/22 testes; Angular 3/3 e build de produção.

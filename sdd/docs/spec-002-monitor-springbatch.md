@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.1 |
+| Versão | 1.0 |
 | Data | 2026-10-23 |
-| Estado | APROVADO |
+| Estado | IMPLEMENTADO E VERIFICADO |
 | Componente | `batch-worker` |
 | ADR | [ADR-004](../adr/ADR-004-batch-monitor-observability.md) |
 

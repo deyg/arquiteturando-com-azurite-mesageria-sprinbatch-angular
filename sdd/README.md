@@ -68,7 +68,7 @@ cd sistemas
 
 ## Evolução aprovada
 
-A `SPEC-002` adicionará ao `batch-worker` o `monitor-springbatch`: API interna e somente leitura para metadados do `JobRepository`, performance, vazão e resiliência, complementada por Micrometer/Prometheus. A especificação está aprovada; os passos M-01 a M-14 ainda não foram implementados.
+A `SPEC-002` adicionou ao `batch-worker` o `monitor-springbatch`: API interna e somente leitura para metadados persistidos do `JobRepository`, performance, vazão e resiliência, complementada por Micrometer/Prometheus. Os passos M-00 a M-14 estão concluídos.
 
 ## Limitações conhecidas
 
