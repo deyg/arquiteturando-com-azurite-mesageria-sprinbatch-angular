@@ -31,3 +31,15 @@ Plano detalhado: [PLAN-002](plan-002-monitor-springbatch.md).
 | M-14 | Regressão e relatório | Maven, E2E e matriz de evidências |
 
 Cada passo M produziu evidência em `sdd/progress/` e commit dedicado. A implementação foi concluída e verificada em 2026-10-23.
+
+## Evolução aprovada — SPEC-003 MySQL 8.4.13 LTS
+
+Plano detalhado: [PLAN-003](plan-003-mysql.md).
+
+| Passo | Entrega | Validação |
+|---|---|---|
+| MYSQL-00 | SPEC, ADR, plano e inventário | plano APTO PARA EXECUÇÃO |
+| MYSQL-01 | Runtime MySQL portátil e scripts | versão 8.4.13, porta 3306 e conexão SQL |
+| MYSQL-02 | Driver, Flyway e schemas | migrations e seed em banco vazio |
+| MYSQL-03 | Consultas e UUID | testes Query, Worker e Monitor |
+| MYSQL-04 | Regressão e documentação | Maven, Angular, smoke e E2E |
