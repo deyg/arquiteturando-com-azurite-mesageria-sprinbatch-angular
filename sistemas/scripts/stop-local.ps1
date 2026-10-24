@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $systems = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $state = Join-Path $systems '.runtime\processes.json'
 if (-not (Test-Path $state)) { Write-Host 'Nenhum processo registrado pelo start-local.ps1.'; exit 0 }
-$records = @(Get-Content $state -Raw | ConvertFrom-Json)
+$records = @(Get-Content $state -Raw | ConvertFrom-Json) | Where-Object { $null -ne $_ -and $null -ne $_.pid }
 foreach ($record in $records) {
     $process = Get-Process -Id $record.pid -ErrorAction SilentlyContinue
     if ($process -and $process.ProcessName -eq 'java') {

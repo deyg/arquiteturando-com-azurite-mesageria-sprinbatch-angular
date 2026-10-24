@@ -7,7 +7,7 @@ $runtimeRoot = Join-Path $env:LOCALAPPDATA 'payroll-export-poc'
 $runtimePaths = @(
     (Join-Path $runtimeRoot 'node\node-v26.12.1-win-x64'),
     (Join-Path $runtimeRoot 'npm'),
-    (Join-Path $runtimeRoot 'postgres\pgsql\bin'),
+    (Join-Path $runtimeRoot 'mysql\mysql-8.4.13-winx64\bin'),
     (Join-Path $runtimeRoot 'kafka\kafka_2.13-4.3.1\bin\windows')
 ) | Where-Object { Test-Path $_ }
 if ($runtimePaths) {
@@ -69,9 +69,17 @@ if ($npm) {
     Add-Check 'npm' 'BLOCKED' 'não encontrado' 'compatível com Node.js'
 }
 
+$mysql = Get-Command mysql -ErrorAction SilentlyContinue
+if ($mysql) {
+    $mysqlText = Get-FirstLine { mysql --version }
+    $mysqlStatus = if ($mysqlText -match '\b8\.4\.13\b') { 'OK' } else { 'BLOCKED' }
+    Add-Check 'MySQL' $mysqlStatus $mysqlText 'MySQL 8.4.13 LTS'
+} else {
+    Add-Check 'MySQL' 'BLOCKED' 'não encontrado no PATH' 'MySQL 8.4.13 LTS'
+}
+
 $checks = @(
     @{ Name = 'Angular CLI'; Commands = @('ng.cmd', 'ng'); Required = 'Angular CLI 22.x' },
-    @{ Name = 'PostgreSQL'; Commands = @('psql.exe', 'psql'); Required = 'PostgreSQL nativo Windows' },
     @{ Name = 'Kafka storage'; Commands = @('kafka-storage.bat'); Required = 'Kafka KRaft 4.3.1' },
     @{ Name = 'Kafka server'; Commands = @('kafka-server-start.bat'); Required = 'Kafka KRaft 4.3.1' },
     @{ Name = 'Kafka topics'; Commands = @('kafka-topics.bat'); Required = 'Kafka KRaft 4.3.1' },
@@ -91,13 +99,13 @@ foreach ($check in $checks) {
     }
 }
 
-$ports = @(4200, 8080, 8081, 8082, 8083, 8084, 9092, 5432, 10000)
+$ports = @(4200, 8080, 8081, 8082, 8083, 8084, 9092, 3306, 10000)
 foreach ($port in $ports) {
     $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($listener) {
         $process = Get-Process -Id $listener.OwningProcess -ErrorAction SilentlyContinue
         $expected = switch ($port) {
-            5432 { $process.ProcessName -eq 'postgres' }
+            3306 { $process.ProcessName -eq 'mysqld' }
             9092 { $process.ProcessName -eq 'java' }
             10000 { $process.ProcessName -eq 'node' }
             default { $false }
@@ -108,7 +116,7 @@ foreach ($port in $ports) {
             Add-Check "Porta $port" 'BLOCKED' "ocupada por $($process.ProcessName) (PID $($listener.OwningProcess))" 'livre antes da inicialização'
         }
     } else {
-        $requiredService = $port -in @(5432, 9092, 10000)
+        $requiredService = $port -in @(3306, 9092, 10000)
         if ($requiredService) {
             Add-Check "Porta $port" 'BLOCKED' 'serviço não está escutando' 'serviço local pronto'
         } else {

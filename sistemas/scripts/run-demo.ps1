@@ -15,7 +15,7 @@ $home_ = Join-Path $env:LOCALAPPDATA 'payroll-export-poc'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 $env:Path = ((@(
-    "$home_\node\node-v26.12.1-win-x64", "$home_\npm", "$home_\postgres\pgsql\bin", "$home_\kafka\kafka_2.13-4.3.1\bin\windows"
+    "$home_\node\node-v26.12.1-win-x64", "$home_\npm", "$home_\mysql\mysql-8.4.13-winx64\bin", "$home_\kafka\kafka_2.13-4.3.1\bin\windows"
 ) | Where-Object { Test-Path $_ }) -join ';') + ';' + $env:Path
 
 function Test-Port([int]$Port) {
@@ -43,7 +43,7 @@ if ($Stop) {
         Write-Host "Angular parado (PID $id)."
     }
     & (Join-Path $PSScriptRoot 'stop-local.ps1')
-    Write-Host 'PostgreSQL, Kafka e Azurite foram preservados.'
+    Write-Host 'MySQL, Kafka e Azurite foram preservados.'
     return
 }
 
@@ -52,10 +52,10 @@ foreach ($tool in 'java', 'node', 'npm.cmd') {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool não encontrado no PATH." }
 }
 
-Write-Host '==> Infraestrutura (PostgreSQL, Kafka, Azurite)' -ForegroundColor Cyan
-if (-not (Test-Port 5432)) {
-    & pg_ctl.exe start -D "$home_\postgres-data" -l "$home_\postgres.log" -o '-p 5432' | Out-Null
-    Wait-Port 5432 60
+Write-Host '==> Infraestrutura (MySQL, Kafka, Azurite)' -ForegroundColor Cyan
+if (-not (Test-Port 3306)) {
+    & (Join-Path $PSScriptRoot 'start-mysql.ps1')
+    Wait-Port 3306 60
 }
 if (-not (Test-Port 9092)) {
     Start-Process -FilePath 'kafka-server-start.bat' -ArgumentList "`"$home_\kafka-server.properties`"" -WindowStyle Hidden `
@@ -67,7 +67,7 @@ if (-not (Test-Port 10000)) {
         -WindowStyle Hidden -RedirectStandardOutput "$home_\azurite.out.log" -RedirectStandardError "$home_\azurite.err.log" | Out-Null
     Wait-Port 10000 30
 }
-Write-Host 'Infraestrutura pronta (5432, 9092, 10000).'
+Write-Host 'Infraestrutura pronta (3306, 9092, 10000).'
 
 Write-Host '==> Aplicações Java (portas 8080-8084)' -ForegroundColor Cyan
 if ($SkipBuild) { & (Join-Path $PSScriptRoot 'start-local.ps1') -SkipBuild } else { & (Join-Path $PSScriptRoot 'start-local.ps1') }
