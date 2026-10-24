@@ -4,7 +4,7 @@
 |---|---|
 | Especificação | [SPEC-003](spec-003-mysql.md) |
 | Decisão | [ADR-005](../adr/ADR-005-mysql-8-4-lts.md) |
-| Estado | VALIDADO em 2026-10-23 |
+| Estado | CONCLUÍDO em 2026-10-23 |
 | Branch | `mysql` |
 
 ## Estratégia

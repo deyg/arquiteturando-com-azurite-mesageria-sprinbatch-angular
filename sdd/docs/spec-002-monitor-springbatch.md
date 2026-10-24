@@ -19,9 +19,9 @@ O monitor é somente leitura, usa a porta existente `8083`, não passa pelo BFF 
 | Fonte | Uso |
 |---|---|
 | `JobRepository`/metadados `BATCH_*` | instâncias, execuções, parâmetros, steps, contadores, estados e duração histórica |
-| Domínio PostgreSQL | correlação com `requestId`, backlog e resultado funcional |
+| Domínio MySQL | correlação com `requestId`, backlog e resultado funcional |
 | Micrometer | timers, counters, gauges, taxas, histogramas e percentis operacionais |
-| Health contributors | disponibilidade de PostgreSQL, Kafka, PDF Motor e Azurite |
+| Health contributors | disponibilidade de MySQL, Kafka, PDF Motor e Azurite |
 
 O acesso direto às tabelas `BATCH_*`, quando indispensável, deve ficar isolado em um adapter/repository. Controllers não podem conter SQL.
 

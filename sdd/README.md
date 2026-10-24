@@ -2,7 +2,7 @@
 
 **Estado: implementação e verificação concluídas em 2026-10-23.**
 
-A POC exporta comprovantes de pagamento de forma assíncrona. O navegador apenas solicita e consulta; Kafka, Spring Batch, PostgreSQL e Azurite preservam o trabalho depois que a tela é fechada.
+A POC exporta comprovantes de pagamento de forma assíncrona. O navegador apenas solicita e consulta; Kafka, Spring Batch, MySQL e Azurite preservam o trabalho depois que a tela é fechada.
 
 ## Componentes e portas
 
@@ -15,20 +15,20 @@ A POC exporta comprovantes de pagamento de forma assíncrona. O navegador apenas
 | Batch Worker | 8083 | consumo idempotente, job e recuperação |
 | PDF Motor | 8084 | renderização HTTP de PDF |
 | Kafka | 9092 | evento versionado de solicitação |
-| PostgreSQL | 5432 | domínio, estado e metadados Spring Batch |
+| MySQL 8.4.13 LTS | 3306 | domínio, estado e metadados Spring Batch |
 | Azurite Blob | 10000 | conteúdo binário dos PDFs |
 
 ```text
 Angular -> BFF -> Request API -> Kafka -> Batch Worker -> PDF Motor
              \-> Query API                 |  |  |
                     |                       |  |  +-> Azurite
-                    +-> PostgreSQL/Azurite  |  +----> PostgreSQL
+                    +-> MySQL/Azurite       |  +----> MySQL
                                             +-------> recuperação no restart
 ```
 
 ## Execução local no Windows
 
-Pré-requisitos: Java 21, Maven Wrapper, PostgreSQL, Kafka KRaft, Azurite e Node.js compatível com Angular 22. Não há Docker nem credenciais Azure.
+Pré-requisitos: Java 21, Maven Wrapper, MySQL 8.4.13 LTS, Kafka KRaft, Azurite e Node.js compatível com Angular 22. Não há Docker nem credenciais Azure.
 
 ```powershell
 cd sistemas
@@ -74,5 +74,7 @@ A `SPEC-002` adicionou ao `batch-worker` o `monitor-springbatch`: API interna e 
 
 - POC local e monoestação; autenticação, autorização e TLS não foram incluídos.
 - O Angular não faz polling automático por decisão arquitetural; a atualização do histórico é manual.
-- Não há transação distribuída entre Kafka, PostgreSQL, HTTP e Blob. A consistência é obtida por IDs determinísticos, constraints, retry finito e reconciliação.
-- O script de start pressupõe que PostgreSQL, Kafka e Azurite já estejam ativos; o preflight informa o que falta.
+- Não há transação distribuída entre Kafka, MySQL, HTTP e Blob. A consistência é obtida por IDs determinísticos, constraints, retry finito e reconciliação.
+- O script de start inicializa o MySQL portátil quando necessário e preserva MySQL, Kafka e Azurite ao encerrar as aplicações.
+
+Migração MySQL: [SPEC-003](docs/spec-003-mysql.md), [PLAN-003](docs/plan-003-mysql.md) e [ADR-005](adr/ADR-005-mysql-8-4-lts.md).

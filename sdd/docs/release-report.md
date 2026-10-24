@@ -2,6 +2,16 @@
 
 Data da verificação: 2026-10-23.
 
+## Variante MySQL 8.4.13 LTS
+
+- Branch: `mysql`.
+- Plano: [PLAN-003](plan-003-mysql.md), concluído.
+- Persistência: MySQL Community Server 8.4.13 LTS em `127.0.0.1:3306`.
+- Flyway: três migrations validadas; 5 empregados e 20 pagamentos fictícios.
+- Spring Batch: schema oficial MySQL, execuções/steps persistidos e monitor funcional.
+- Regressão: Maven 20/20, Angular 3/3, build de produção e E2E com PDF válido.
+- Escopo excluído: migração dos dados PostgreSQL existentes e configuração produtiva MySQL.
+
 ## Requisitos, aceite, testes e commits
 
 | Requisitos | Aceite | Evidência principal | Commit |

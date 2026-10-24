@@ -22,4 +22,4 @@ cd sistemas
 .\scripts\stop-local.ps1
 ```
 
-O script de parada encerra exclusivamente PIDs gravados pelo `start-local.ps1`; serviços que já ocupavam portas não são registrados nem interrompidos. PostgreSQL, Kafka e Azurite são preservados.
+O script de parada encerra exclusivamente PIDs gravados pelo `start-local.ps1`; serviços que já ocupavam portas não são registrados nem interrompidos. MySQL, Kafka e Azurite são preservados.

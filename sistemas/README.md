@@ -18,9 +18,18 @@ Abra o PowerShell na pasta sistemas (cd C:\29-arquiteturando-com-azurite-mesager
 
 3. Suba a infraestrutura local:
 
-   - PostgreSQL na porta `5432`;
+   - MySQL 8.4.13 LTS na porta `3306`;
    - Kafka na porta `9092`;
    - Azurite Blob na porta `10000`.
+
+   O MySQL deve ser provisionado uma vez em
+   `%LOCALAPPDATA%\payroll-export-poc\mysql\mysql-8.4.13-winx64` usando o ZIP
+   oficial Windows x64. Depois disso, este script inicializa o diretório de
+   dados, cria o database `payroll` e o usuário local da POC:
+
+   ```powershell
+   .\scripts\start-mysql.ps1
+   ```
 
 4. Confirme novamente que a infraestrutura está disponível:
 
@@ -28,7 +37,7 @@ Abra o PowerShell na pasta sistemas (cd C:\29-arquiteturando-com-azurite-mesager
    .\scripts\check-prereqs.ps1
    ```
 
-   As portas `5432`, `9092` e `10000` devem aparecer com os serviços esperados.
+   As portas `3306`, `9092` e `10000` devem aparecer com os serviços esperados.
 
 5. Faça o build/deploy local dos cinco aplicativos Java:
 

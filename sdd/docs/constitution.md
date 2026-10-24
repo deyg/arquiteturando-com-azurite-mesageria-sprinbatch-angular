@@ -10,7 +10,7 @@
 
 ## 1. Missão
 
-Demonstrar, de ponta a ponta, uma exportação de comprovantes de pagamento: seleção de empregados no Angular; aceite HTTP 202; evento Kafka; execução Spring Batch; renderização por um motor PDF REST; armazenamento dos binários em Azurite; metadados e referências em PostgreSQL; consulta e download via BFF.
+Demonstrar, de ponta a ponta, uma exportação de comprovantes de pagamento: seleção de empregados no Angular; aceite HTTP 202; evento Kafka; execução Spring Batch; renderização por um motor PDF REST; armazenamento dos binários em Azurite; metadados e referências em MySQL; consulta e download via BFF.
 
 O propósito principal é validar integrações, rastreabilidade, retentativas, reinício de jobs e consistência entre recursos distintos, não construir um sistema de folha de pagamento real.
 
@@ -23,14 +23,14 @@ O propósito principal é validar integrações, rastreabilidade, retentativas, 
 | C-03 | Contrato antes de código | Endpoints REST documentados em OpenAPI; mensagem Kafka versionada. |
 | C-04 | Responsabilidade única | BFF agrega, Request API publica, Query API consulta, Batch processa, PDF Motor renderiza, Angular apresenta. |
 | C-05 | Backend unificado | Java 21 + Spring Boot 4.1.x + Maven para todos os cinco projetos Java; Spring Batch 6.0.x no worker. |
-| C-06 | Dados persistidos corretamente | PostgreSQL guarda entidades e metadados; Azurite guarda o binário; `blob_name`/`container` no banco, nunca caminhos físicos da máquina. |
+| C-06 | Dados persistidos corretamente | MySQL guarda entidades e metadados; Azurite guarda o binário; `blob_name`/`container` no banco, nunca caminhos físicos da máquina. |
 | C-07 | Operações recuperáveis | IDs estáveis, constraints de unicidade, retry limitado e reconciliação para uploads sem commit SQL. |
-| C-08 | Transparência transacional | Não prometer transação ACID entre HTTP, PostgreSQL e Azurite. Transação SQL é local; storage exige idempotência e compensação. |
-| C-09 | Batch real e reiniciável | Utilizar `JobRepository` persistido no PostgreSQL, `Job`, `Step`, reader/processor/writer, controle de status e testes de restart. |
+| C-08 | Transparência transacional | Não prometer transação ACID entre HTTP, MySQL e Azurite. Transação SQL é local; storage exige idempotência e compensação. |
+| C-09 | Batch real e reiniciável | Utilizar `JobRepository` persistido no MySQL, `Job`, `Step`, reader/processor/writer, controle de status e testes de restart. |
 | C-10 | Mensageria confiável | Retornar HTTP 202 somente após confirmação de publicação no Kafka; consumo *at least once* com deduplicação pelo `requestId`. |
 | C-11 | Observabilidade mínima | `requestId`, `paymentId` e `JobExecutionId` propagados em logs quando aplicáveis e registrados nos seus contextos internos. |
 | C-12 | Privacidade da POC | Apenas dados fictícios, sem autenticação real e sem informações bancárias ou pessoais verdadeiras. |
-| C-13 | Testabilidade | Unitários, integração PostgreSQL/Azurite/Kafka, contrato REST e cenário end-to-end documentados. |
+| C-13 | Testabilidade | Unitários, integração MySQL/Azurite/Kafka, contrato REST e cenário end-to-end documentados. |
 | C-14 | Desenvolvimento rastreável | Requisito -> critério de aceite -> teste -> tarefa -> commit -> evidência. Um passo implementado = validação + commit. |
 | C-15 | Governança de mudanças | Alterações em regra/contrato precisam atualizar documento e testes; decisões arquiteturais relevantes terão ADR. |
 
@@ -40,7 +40,7 @@ O propósito principal é validar integrações, rastreabilidade, retentativas, 
 - **Spring Boot:** linha estável 4.1.x, referência inicial 4.1.1.
 - **Spring Batch:** linha estável 6.0.x, referência inicial 6.0.6.
 - **Kafka:** Apache Kafka 4.3.1 com KRaft e apenas um broker local (ambiente de desenvolvimento).
-- **PostgreSQL:** distribuição nativa Windows; versão específica a fixar no bootstrap após smoke test.
+- **MySQL:** Community Server 8.4.13 LTS, distribuição ZIP portátil Windows x64.
 - **Angular:** 22.x, componentes standalone; Node.js conforme matriz oficial do Angular 22 (`^22.22.3 || ^24.15.0 || ^26.0.0`).
 - **PDF:** biblioteca open-source Java (preferência inicial por Apache PDFBox); motor HTTP independente.
 - **Azurite:** serviço Blob local por npm/VS Code; connection string `UseDevelopmentStorage=true` apenas no ambiente local.
@@ -87,7 +87,7 @@ O propósito principal é validar integrações, rastreabilidade, retentativas, 
 - cURLs e Postman; documentação, migrations, scripts locais e evidências.
 
 ### Fora do escopo
-- Autenticação real, RBAC, LGPD aplicada a dados reais, assinaturas digitais, folha de pagamento real, infraestrutura de produção, alta disponibilidade, multi-tenancy, ZIP e armazenamento de documentos no PostgreSQL.
+- Autenticação real, RBAC, LGPD aplicada a dados reais, assinaturas digitais, folha de pagamento real, infraestrutura de produção, alta disponibilidade, multi-tenancy, ZIP e armazenamento de documentos no MySQL.
 - Outbox transacional e DLQ/DLT são **evoluções arquiteturais** avaliáveis após a primeira entrega; retries idempotentes são obrigatórios desde o MVP.
 - Dispositivos móveis nativos e operação em Azure real.
 
@@ -98,7 +98,8 @@ O propósito principal é validar integrações, rastreabilidade, retentativas, 
 | DEC-01 | Monorepo, seis apps, Maven multi-módulo para Java | Proposta |
 | DEC-02 | Java 21 + Boot 4.1.x + Batch 6.0.x | Proposta |
 | DEC-03 | Apache Kafka KRaft nativo Windows, sem Docker | Requer smoke test |
-| DEC-04 | Azurite + paths lógicos no PostgreSQL | Proposta |
+| DEC-04 | Azurite + paths lógicos no banco relacional | Proposta |
+| DEC-12 | MySQL 8.4.13 LTS substitui PostgreSQL no domínio e no JobRepository | Aprovada — ADR-005 |
 | DEC-05 | At-least-once + idempotência + compensação, não transação distribuída | Proposta |
 | DEC-06 | Motor PDF stateless, um PDF por pagamento | Proposta |
 | DEC-07 | Envio Kafka confirmado antes do 202, com possível atraso de consulta | Proposta |

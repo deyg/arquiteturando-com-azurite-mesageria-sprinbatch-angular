@@ -39,7 +39,7 @@ Não será definida meta numérica de produção com base na POC. O baseline loc
 ## Estratégia de testes
 
 1. Testes unitários para cálculo de taxas, duração e validação de filtros.
-2. Integração com PostgreSQL real para `JobRepository` e janelas históricas.
+2. Integração com banco relacional real para `JobRepository` e janelas históricas; MySQL 8.4.13 na variante atual.
 3. Falhas determinísticas para retry, skip, rollback e SQL pós-upload.
 4. Redelivery Kafka e restart para métricas de recuperação.
 5. Scrape Prometheus validando nomes, tipos e ausência de IDs nas tags.

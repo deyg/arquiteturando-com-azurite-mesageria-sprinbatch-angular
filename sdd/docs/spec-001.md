@@ -38,7 +38,7 @@ A POC deverá ser inteiramente local e usar dados fictícios. A geração é **u
 | RF-04 | BFF expor uma API única ao Angular | Chamadas somente ao BFF |
 | RF-05 | Request API publicar mensagem no tópico Kafka e retornar HTTP 202 após confirmação do broker | Teste de producer |
 | RF-06 | Evento conter `eventVersion`, `requestId`, `createdAt`, filtros e empregados | Validação do contrato |
-| RF-07 | Worker consumir evento, deduplicar e registrar solicitação em PostgreSQL | Teste de redelivery |
+| RF-07 | Worker consumir evento, deduplicar e registrar solicitação em MySQL | Teste de redelivery |
 | RF-08 | Worker iniciar `Job` Spring Batch com parâmetros estáveis e persistir metadados | Inspeção JobRepository |
 | RF-09 | Reader consultar registros de pagamentos correspondentes aos filtros | Teste SQL/Batch |
 | RF-10 | Processor chamar PDF Motor **uma vez logicamente por comprovante**, com retry físico permitido | Teste de integração |
@@ -77,9 +77,9 @@ A POC deverá ser inteiramente local e usar dados fictícios. A geração é **u
 | RNF-02 | Teste demonstrável com seed mínima de 5 empregados e 20 pagamentos. |
 | RNF-03 | Logs permitem correlacionar `requestId`, `paymentId` e o `JobExecutionId` interno quando aplicável. |
 | RNF-04 | Clientes HTTP e Kafka usam timeouts configurados e retries limitados. |
-| RNF-05 | Persistência e schema por Flyway; schema do Spring Batch em PostgreSQL. |
+| RNF-05 | Persistência e schema por Flyway; schema do Spring Batch em MySQL. |
 | RNF-06 | Portas e connection strings configuráveis por variáveis de ambiente. |
-| RNF-07 | Não armazenar bytes de PDFs em PostgreSQL. |
+| RNF-07 | Não armazenar bytes de PDFs em MySQL. |
 | RNF-08 | Serviços têm `/actuator/health`; testes independentes por serviço. |
 | RNF-09 | Não fazer chamadas externas de rede para gerar ou armazenar dados da POC. |
 
@@ -94,7 +94,7 @@ A POC deverá ser inteiramente local e usar dados fictícios. A geração é **u
 | `documento_gerado` | `id`, `solicitacao_id`, `comprovante_id`, `status`, `container_name`, `blob_name`, `checksum_sha256`, `error_message` | UNIQUE (`solicitacao_id`, `comprovante_id`) |
 | `BATCH_*` | metadados oficiais do JobRepository | schema definido pelo Spring Batch |
 
-**Dinheiro:** `NUMERIC(15,2)` no PostgreSQL e `BigDecimal` no Java. **Competência:** `YYYY-MM` no contrato REST, persistência com mês/ano normalizados. **Sem CPF ou dado bancário real.**
+**Dinheiro:** `DECIMAL(15,2)` no MySQL e `BigDecimal` no Java. **Competência:** `YYYY-MM` no contrato REST, persistência com mês/ano normalizados. **Sem CPF ou dado bancário real.**
 
 ## 7. Contratos REST públicos via BFF
 
@@ -213,7 +213,7 @@ Entrega pelo Kafka será tratada como *at least once*; o worker usa `requestId` 
 | Batch worker actuator | 8083 | Processo de consumer + JobLauncher |
 | PDF Motor API | 8084 | `application/pdf` |
 | Kafka | 9092 | Broker KRaft local |
-| PostgreSQL | 5432 | DB `payroll_poc` |
+| MySQL | 3306 | DB `payroll`, versão 8.4.13 LTS |
 | Azurite Blob | 10000 | Container `payroll-pdfs` |
 
 A distribuição Kafka para Windows e o boot Spring Batch 6 deverão passar smoke test antes da primeira feature. Scripts `start-local.ps1` e `stop-local.ps1` previstos como entregáveis.
@@ -226,7 +226,7 @@ A distribuição Kafka para Windows e o boot Spring Batch 6 deverão passar smok
 | AC-02 | POST assíncrono | Kafka recebe o evento e a API retorna `202` após o ack, sem esperar PDFs. |
 | AC-03 | Fechar imediatamente o Angular | O worker conclui o processamento sem sessão ativa. |
 | AC-04 | Voltar em uma sessão futura | O histórico é localizado por filtros, sem exigir `requestId` ou estado do navegador. |
-| AC-05 | PDF por pagamento | Azurite contém N PDFs válidos e PostgreSQL contém N referências, sem binários. |
+| AC-05 | PDF por pagamento | Azurite contém N PDFs válidos e MySQL contém N referências, sem binários. |
 | AC-06 | Nenhum comprovante elegível | A solicitação termina `COMPLETED`, com zero documentos e mensagem clara. |
 | AC-07 | Kafka indisponível | A Request API não responde `202` sem confirmação do broker. |
 | AC-08 | Redelivery Kafka | Não há duplicação lógica de solicitação, vínculo ou PDF. |
@@ -244,7 +244,7 @@ A distribuição Kafka para Windows e o boot Spring Batch 6 deverão passar smok
 | J-02 Solicitar | RF-05, RF-06 | AC-02, AC-07 | BFF, Request API, Kafka |
 | J-03 Processar | RF-07 a RF-13 | AC-03, AC-05, AC-06, AC-08, AC-09, AC-10 | Kafka, Batch, Motor, SQL, Azurite |
 | J-04 Acompanhar | RF-14 a RF-16 | AC-04, AC-12 | Query API, BFF, Angular |
-| J-05 Recuperar | RF-17 | AC-08 a AC-11 | Batch, PostgreSQL, Azurite |
+| J-05 Recuperar | RF-17 | AC-08 a AC-11 | Batch, MySQL, Azurite |
 | Infra/API tests | RF-18 | AC-13 | Postman, scripts, infra |
 
 ## 13. Entregáveis SDD e ordem proposta
@@ -264,5 +264,5 @@ A distribuição Kafka para Windows e o boot Spring Batch 6 deverão passar smok
 - **P01 (decidido por DEC-11):** manter Kafka `publish + ack -> 202`, aceitar a janela eventual antes da ingestão, não fazer polling automático e oferecer consulta histórica por filtros.
 - **P02:** confirmar motor de PDF por registro de comprovante (não um PDF consolidado por empregado).
 - **P03:** confirmar que autenticação, ZIP e dados reais estão fora do MVP.
-- **P04:** confirmar `chunk(1)` e responsabilidade de recuperação entre Azure Blob emulado e PostgreSQL.
+- **P04:** confirmar `chunk(1)` e responsabilidade de recuperação entre Azure Blob emulado e MySQL.
 - **P05:** validar Kafka KRaft em Windows nativo antes de construir os serviços.
