@@ -30,13 +30,13 @@ class ExportHistoryServiceTest {
                 INSERT INTO solicitacao(id,status,start_period,end_period,payment_types,created_at,completed_at,
                   total_documents,completed_documents,failed_documents)
                 VALUES (:id,'COMPLETED','2026-01','2026-01','SALARY',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,1,0)
-                """).param("id", requestId).update();
+                """).param("id", requestId.toString()).update();
         jdbc.sql("INSERT INTO solicitacao_empregado(solicitacao_id,empregado_id) VALUES (:id,101)")
-                .param("id", requestId).update();
+                .param("id", requestId.toString()).update();
         jdbc.sql("""
                 INSERT INTO documento_gerado(id,solicitacao_id,comprovante_id,status,container_name,blob_name,checksum_sha256)
                 VALUES (:documentId,:requestId,501,'COMPLETED','payroll-documents',:blob,repeat('a',64))
-                """).param("documentId", documentId).param("requestId", requestId).param("blob", blob).update();
+                """).param("documentId", documentId.toString()).param("requestId", requestId.toString()).param("blob", blob).update();
         var container = new BlobContainerClientBuilder().connectionString("UseDevelopmentStorage=true")
                 .containerName("payroll-documents").buildClient();
         container.createIfNotExists();

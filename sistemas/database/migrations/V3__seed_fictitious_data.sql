@@ -1,12 +1,12 @@
-INSERT INTO empregado (id, matricula, nome_ficticio, ativo) VALUES
+INSERT IGNORE INTO empregado (id, matricula, nome_ficticio, ativo) VALUES
     (101, 'MAT-101', 'Ana Horizonte', TRUE),
     (102, 'MAT-102', 'Bruno Nascente', TRUE),
     (103, 'MAT-103', 'Carla Ipê', TRUE),
     (104, 'MAT-104', 'Diego Veredas', TRUE),
     (105, 'MAT-105', 'Elisa Maré', TRUE)
-ON CONFLICT (id) DO NOTHING;
+;
 
-INSERT INTO comprovante_pagamento (id, empregado_id, competencia, tipo, descricao, valor_bruto, descontos, valor_liquido, data_pagamento) VALUES
+INSERT IGNORE INTO comprovante_pagamento (id, empregado_id, competencia, tipo, descricao, valor_bruto, descontos, valor_liquido, data_pagamento) VALUES
     (501,101,'2026-01','SALARY','Salário mensal',6500.00,1250.00,5250.00,'2026-01-30'),
     (502,101,'2026-01','BENEFIT','Auxílio alimentação',900.00,0.00,900.00,'2026-01-30'),
     (503,101,'2026-02','SALARY','Salário mensal',6500.00,1250.00,5250.00,'2026-02-27'),
@@ -27,4 +27,4 @@ INSERT INTO comprovante_pagamento (id, empregado_id, competencia, tipo, descrica
     (518,105,'2026-04','BENEFIT','Auxílio transporte',450.00,0.00,450.00,'2026-04-30'),
     (519,105,'2026-06','SALARY','Salário mensal',4900.00,720.00,4180.00,'2026-06-30'),
     (520,105,'2026-06','BENEFIT','Auxílio transporte',450.00,0.00,450.00,'2026-06-30')
-ON CONFLICT (id) DO NOTHING;
+;
