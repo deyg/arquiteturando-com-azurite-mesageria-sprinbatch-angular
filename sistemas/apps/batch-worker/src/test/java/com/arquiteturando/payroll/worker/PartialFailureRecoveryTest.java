@@ -63,11 +63,11 @@ class PartialFailureRecoveryTest {
     }
 
     private String requestStatus(UUID id) {
-        return jdbc.sql("SELECT status FROM solicitacao WHERE id=:id").param("id", id).query(String.class).single();
+        return jdbc.sql("SELECT status FROM solicitacao WHERE id=:id").param("id", id.toString()).query(String.class).single();
     }
 
     private List<String> documentStatuses(UUID id) {
         return jdbc.sql("SELECT status FROM documento_gerado WHERE solicitacao_id=:id ORDER BY comprovante_id")
-                .param("id", id).query(String.class).list();
+                .param("id", id.toString()).query(String.class).list();
     }
 }

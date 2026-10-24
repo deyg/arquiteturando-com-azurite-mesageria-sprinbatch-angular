@@ -12,17 +12,16 @@ public class RequestIngestionService {
     @Transactional
     public boolean ingest(ExportRequestedEvent event) {
         int inserted=jdbc.sql("""
-                INSERT INTO solicitacao(id,status,start_period,end_period,payment_types,created_at)
+                INSERT IGNORE INTO solicitacao(id,status,start_period,end_period,payment_types,created_at)
                 VALUES (:id,'PENDING',:start,:end,:types,:created)
-                ON CONFLICT (id) DO NOTHING
-                """).param("id", event.requestId()).param("start", event.startPeriod()).param("end", event.endPeriod())
+                """).param("id", event.requestId().toString()).param("start", event.startPeriod()).param("end", event.endPeriod())
                 .param("types", String.join(",", event.paymentTypes()))
                 .param("created", event.createdAt().atOffset(java.time.ZoneOffset.UTC)).update();
         for (Long employeeId : event.employeeIds()) {
             jdbc.sql("""
-                    INSERT INTO solicitacao_empregado(solicitacao_id,empregado_id)
-                    VALUES (:requestId,:employeeId) ON CONFLICT DO NOTHING
-                    """).param("requestId", event.requestId()).param("employeeId", employeeId).update();
+                    INSERT IGNORE INTO solicitacao_empregado(solicitacao_id,empregado_id)
+                    VALUES (:requestId,:employeeId)
+                    """).param("requestId", event.requestId().toString()).param("employeeId", employeeId).update();
         }
         return inserted == 1;
     }

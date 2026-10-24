@@ -26,7 +26,7 @@ public class DocumentStateRepository {
                   blob_name=:blob,checksum_sha256=:checksum,error_message=NULL,updated_at=CURRENT_TIMESTAMP
                 WHERE id=:id
                 """).param("container", container).param("blob", blobName)
-                .param("checksum", checksum).param("id", documentId).update());
+                .param("checksum", checksum).param("id", documentId.toString()).update());
         if (updated != 1) {
             throw new IllegalStateException("Document state was not persisted: " + documentId);
         }

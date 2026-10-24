@@ -27,7 +27,7 @@ public class CompleteRequestTasklet implements Tasklet {
                   error_message=CASE WHEN EXISTS (SELECT 1 FROM documento_gerado d WHERE d.solicitacao_id=s.id AND d.status='FAILED')
                     THEN 'Um ou mais documentos esgotaram as tentativas' ELSE NULL END
                 WHERE s.id=:id
-                """).param("id", id).update();
+                """).param("id", id.toString()).update();
         return RepeatStatus.FINISHED;
     }
 }

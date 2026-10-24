@@ -35,7 +35,7 @@ public class BatchMetricsService {
 
     public List<DependencyMetric> dependencies(){
         Instant now=Instant.now();
-        return List.of(new DependencyMetric(DependencyMetric.Dependency.POSTGRESQL,DependencyMetric.Status.UP,now,null,now),
+        return List.of(new DependencyMetric(DependencyMetric.Dependency.MYSQL,DependencyMetric.Status.UP,now,null,now),
                 new DependencyMetric(DependencyMetric.Dependency.KAFKA,DependencyMetric.Status.UNKNOWN,now,null,null),
                 new DependencyMetric(DependencyMetric.Dependency.PDF_MOTOR,DependencyMetric.Status.UNKNOWN,now,null,null),
                 new DependencyMetric(DependencyMetric.Dependency.AZURITE,DependencyMetric.Status.UNKNOWN,now,null,null));

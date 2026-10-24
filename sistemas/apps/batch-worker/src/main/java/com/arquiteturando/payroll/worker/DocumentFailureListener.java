@@ -28,6 +28,6 @@ public class DocumentFailureListener implements SkipListener<PaymentDocument, Pa
                 UPDATE documento_gerado SET status='FAILED',error_message=:message,updated_at=CURRENT_TIMESTAMP
                 WHERE id=:id AND status<>'COMPLETED'
                 """).param("message", message.substring(0, Math.min(message.length(), 1000)))
-                .param("id", item.documentId()).update();
+                .param("id", item.documentId().toString()).update();
     }
 }

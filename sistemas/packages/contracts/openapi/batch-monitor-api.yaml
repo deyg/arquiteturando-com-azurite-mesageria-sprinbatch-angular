@@ -318,7 +318,7 @@ components:
       type: object
       required: [dependency, status, observedAt]
       properties:
-        dependency: { type: string, enum: [POSTGRESQL, KAFKA, PDF_MOTOR, AZURITE] }
+        dependency: { type: string, enum: [MYSQL, KAFKA, PDF_MOTOR, AZURITE] }
         status: { type: string, enum: [UP, DOWN, DEGRADED, UNKNOWN] }
         observedAt: { type: string, format: date-time }
         latencyMs: { type: [number, 'null'], format: double, minimum: 0 }

@@ -44,9 +44,9 @@ public class BatchJobConfiguration {
                            p.descricao,p.valor_bruto,p.descontos,p.valor_liquido
                     FROM documento_gerado d JOIN comprovante_pagamento p ON p.id=d.comprovante_id
                     JOIN empregado e ON e.id=p.empregado_id
-                    WHERE d.solicitacao_id=?::uuid AND d.status<>'COMPLETED' ORDER BY p.id
+                    WHERE d.solicitacao_id=? AND d.status<>'COMPLETED' ORDER BY p.id
                     """).queryArguments(requestId).rowMapper((rs, row) -> new PaymentDocument(
-                        rs.getObject(1, java.util.UUID.class), rs.getObject(2, java.util.UUID.class), rs.getLong(3),
+                        java.util.UUID.fromString(rs.getString(1)), java.util.UUID.fromString(rs.getString(2)), rs.getLong(3),
                         rs.getLong(4), rs.getString(5), rs.getString(6), rs.getString(7), rs.getString(8),
                         rs.getString(9), rs.getBigDecimal(10), rs.getBigDecimal(11), rs.getBigDecimal(12), null)).build();
     }

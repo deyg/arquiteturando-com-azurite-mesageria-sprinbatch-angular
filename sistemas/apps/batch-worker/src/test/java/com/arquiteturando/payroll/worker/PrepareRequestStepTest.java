@@ -47,7 +47,7 @@ class PrepareRequestStepTest {
         assertThat(firstCount).isEqualTo(2);
         assertThat(documentCount(id)).isEqualTo(2);
         var documents = jdbc.sql("SELECT blob_name FROM documento_gerado WHERE solicitacao_id=:id AND status='COMPLETED' AND length(checksum_sha256)=64")
-                .param("id", id).query(String.class).list();
+                .param("id", id.toString()).query(String.class).list();
         assertThat(documents).hasSize(2);
         assertThat(documents).allSatisfy(blob -> {
             assertThat(storage.exists(blob)).isTrue();
@@ -62,11 +62,11 @@ class PrepareRequestStepTest {
     }
 
     private String status(UUID id) {
-        return jdbc.sql("SELECT status FROM solicitacao WHERE id=:id").param("id", id).query(String.class).single();
+        return jdbc.sql("SELECT status FROM solicitacao WHERE id=:id").param("id", id.toString()).query(String.class).single();
     }
 
     private int documentCount(UUID id) {
         return jdbc.sql("SELECT count(*) FROM documento_gerado WHERE solicitacao_id=:id")
-                .param("id", id).query(Integer.class).single();
+                .param("id", id.toString()).query(Integer.class).single();
     }
 }

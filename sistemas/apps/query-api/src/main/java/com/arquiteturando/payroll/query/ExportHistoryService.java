@@ -23,7 +23,10 @@ public class ExportHistoryService {
         if (employeeId != null) where.append(" AND EXISTS (SELECT 1 FROM solicitacao_empregado se WHERE se.solicitacao_id=s.id AND se.empregado_id=:employeeId)");
         if (startPeriod != null) where.append(" AND s.start_period>=:startPeriod");
         if (endPeriod != null) where.append(" AND s.end_period<=:endPeriod");
-        if (paymentTypes != null && !paymentTypes.isEmpty()) where.append(" AND string_to_array(s.payment_types, ',') && string_to_array(:paymentTypes, ',')");
+        if (paymentTypes != null && !paymentTypes.isEmpty()) where.append("""
+                 AND ((FIND_IN_SET('SALARY', :paymentTypes)>0 AND FIND_IN_SET('SALARY', s.payment_types)>0)
+                   OR (FIND_IN_SET('BENEFIT', :paymentTypes)>0 AND FIND_IN_SET('BENEFIT', s.payment_types)>0))
+                """);
         if (status != null) where.append(" AND s.status=:status");
         String filter = where.toString();
         JdbcClient.StatementSpec count = bind(jdbc.sql("SELECT count(*) FROM solicitacao s" + filter), requestId, employeeId, startPeriod, endPeriod, paymentTypes, status);
@@ -43,7 +46,7 @@ public class ExportHistoryService {
         return jdbc.sql("""
                 SELECT id,status,start_period,end_period,payment_types,created_at,total_documents,
                        completed_documents,failed_documents,error_message FROM solicitacao WHERE id=:id
-                """).param("id", requestId).query((rs, row) -> mapExport(rs)).optional()
+                """).param("id", requestId.toString()).query((rs, row) -> mapExport(rs)).optional()
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Solicitação não encontrada"));
     }
 
@@ -53,8 +56,8 @@ public class ExportHistoryService {
                 SELECT d.id,d.comprovante_id,p.empregado_id,d.status,d.error_message
                 FROM documento_gerado d JOIN comprovante_pagamento p ON p.id=d.comprovante_id
                 WHERE d.solicitacao_id=:id ORDER BY d.comprovante_id
-                """).param("id", requestId).query((rs, row) -> new DocumentView(
-                rs.getObject(1, UUID.class), rs.getLong(2), rs.getLong(3), rs.getString(4),
+                """).param("id", requestId.toString()).query((rs, row) -> new DocumentView(
+                UUID.fromString(rs.getString(1)), rs.getLong(2), rs.getLong(3), rs.getString(4),
                 "comprovante-" + rs.getLong(2) + ".pdf",
                 rs.getString(4).equals("COMPLETED") ? "/api/v1/documents/" + rs.getObject(1) + "/download" : null,
                 rs.getString(5))).list();
@@ -63,13 +66,13 @@ public class ExportHistoryService {
 
     public String completedBlob(UUID documentId) {
         return jdbc.sql("SELECT blob_name FROM documento_gerado WHERE id=:id AND status='COMPLETED'")
-                .param("id", documentId).query(String.class).optional()
+                .param("id", documentId.toString()).query(String.class).optional()
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Documento concluído não encontrado"));
     }
 
     private JdbcClient.StatementSpec bind(JdbcClient.StatementSpec spec, UUID requestId, Long employeeId,
                                            String start, String end, List<String> paymentTypes, String status) {
-        if (requestId != null) spec = spec.param("requestId", requestId);
+        if (requestId != null) spec = spec.param("requestId", requestId.toString());
         if (employeeId != null) spec = spec.param("employeeId", employeeId);
         if (start != null) spec = spec.param("startPeriod", start);
         if (end != null) spec = spec.param("endPeriod", end);
@@ -79,8 +82,8 @@ public class ExportHistoryService {
     }
 
     private ExportView mapExport(java.sql.ResultSet rs) throws java.sql.SQLException {
-        return new ExportView(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3), rs.getString(4),
-                List.of(rs.getString(5).split(",")), rs.getObject(6, OffsetDateTime.class),
+        return new ExportView(UUID.fromString(rs.getString(1)), rs.getString(2), rs.getString(3), rs.getString(4),
+                List.of(rs.getString(5).split(",")), rs.getTimestamp(6).toInstant().atOffset(java.time.ZoneOffset.UTC),
                 rs.getInt(7), rs.getInt(8), rs.getInt(9), rs.getString(10));
     }
 

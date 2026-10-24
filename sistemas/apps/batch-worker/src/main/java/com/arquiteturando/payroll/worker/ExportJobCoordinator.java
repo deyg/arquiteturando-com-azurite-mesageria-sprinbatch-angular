@@ -57,9 +57,9 @@ public class ExportJobCoordinator {
     @EventListener(ApplicationReadyEvent.class)
     public void recoverPendingRequests() {
         recoveryDuration.record(() -> jdbc.sql("SELECT id FROM solicitacao WHERE status IN ('PENDING','PROCESSING') ORDER BY created_at")
-                .query(UUID.class).list().forEach(id -> {
+                .query(String.class).list().stream().map(UUID::fromString).forEach(id -> {
                     long completed=jdbc.sql("SELECT count(*) FROM documento_gerado WHERE solicitacao_id=:id AND status='COMPLETED'")
-                            .param("id",id).query(Long.class).single();
+                            .param("id",id.toString()).query(Long.class).single();
                     recovered.increment(); preserved.increment(completed); launch(id);
                 }));
     }

@@ -22,8 +22,8 @@ class RequestIngestionServiceTest {
                 List.of(101L, 102L), "2026-01", "2026-02", List.of("SALARY"));
         ingestion.ingest(event);
         ingestion.ingest(event);
-        Integer requests = jdbc.sql("SELECT count(*) FROM solicitacao WHERE id=:id").param("id", id).query(Integer.class).single();
-        Integer links = jdbc.sql("SELECT count(*) FROM solicitacao_empregado WHERE solicitacao_id=:id").param("id", id).query(Integer.class).single();
+        Integer requests = jdbc.sql("SELECT count(*) FROM solicitacao WHERE id=:id").param("id", id.toString()).query(Integer.class).single();
+        Integer links = jdbc.sql("SELECT count(*) FROM solicitacao_empregado WHERE solicitacao_id=:id").param("id", id.toString()).query(Integer.class).single();
         assertThat(requests).isEqualTo(1);
         assertThat(links).isEqualTo(2);
     }

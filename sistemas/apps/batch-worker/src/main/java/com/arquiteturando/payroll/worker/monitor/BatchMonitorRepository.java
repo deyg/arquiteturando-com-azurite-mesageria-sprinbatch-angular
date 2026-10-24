@@ -68,10 +68,10 @@ public class BatchMonitorRepository {
     public List<BatchJobView> jobs() {
         return jdbc.sql("""
                 SELECT i.job_name,count(DISTINCT i.job_instance_id),
-                  (array_agg(e.job_execution_id ORDER BY e.create_time DESC))[1],
-                  (array_agg(e.status ORDER BY e.create_time DESC))[1],
-                  (array_agg(e.start_time ORDER BY e.create_time DESC))[1]
-                FROM batch_job_instance i LEFT JOIN batch_job_execution e USING(job_instance_id)
+                  (SELECT e2.job_execution_id FROM batch_job_execution e2 JOIN batch_job_instance i2 ON i2.job_instance_id=e2.job_instance_id WHERE i2.job_name=i.job_name ORDER BY e2.create_time DESC LIMIT 1),
+                  (SELECT e2.status FROM batch_job_execution e2 JOIN batch_job_instance i2 ON i2.job_instance_id=e2.job_instance_id WHERE i2.job_name=i.job_name ORDER BY e2.create_time DESC LIMIT 1),
+                  (SELECT e2.start_time FROM batch_job_execution e2 JOIN batch_job_instance i2 ON i2.job_instance_id=e2.job_instance_id WHERE i2.job_name=i.job_name ORDER BY e2.create_time DESC LIMIT 1)
+                FROM batch_job_instance i
                 GROUP BY i.job_name ORDER BY i.job_name
                 """).query((rs, row) -> new BatchJobView(rs.getString(1), rs.getLong(2), nullableLong(rs, 3),
                         status(rs.getString(4)), instant(rs, 5))).list();
@@ -81,7 +81,7 @@ public class BatchMonitorRepository {
         var rows=jdbc.sql("""
                 SELECT id,status,created_at,started_at,completed_at,total_documents,completed_documents,failed_documents
                 FROM solicitacao WHERE id=:id
-                """).param("id",id).query((rs,row)->new BatchRequestCorrelation(id,rs.getString(2),instant(rs,3),
+                """).param("id",id.toString()).query((rs,row)->new BatchRequestCorrelation(id,rs.getString(2),instant(rs,3),
                         instant(rs,4),instant(rs,5),rs.getLong(6),rs.getLong(7),rs.getLong(8),List.of())).list();
         if(rows.isEmpty()) return null;
         var base=rows.getFirst();
@@ -94,35 +94,34 @@ public class BatchMonitorRepository {
         validateWindow(from,to);
         Map<String,Object> p=windowParams(from,to);
         String jobFilter=""; if(jobName!=null){jobFilter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
-        String source=" FROM batch_job_execution e JOIN batch_job_instance i USING(job_instance_id)";
+        String source=" FROM batch_job_execution e JOIN batch_job_instance i ON i.job_instance_id=e.job_instance_id";
         String stepFilter="";
-        if(stepName!=null){source=" FROM batch_step_execution e JOIN batch_job_execution je USING(job_execution_id) JOIN batch_job_instance i ON i.job_instance_id=je.job_instance_id";stepFilter=" AND e.step_name=:stepName";p.put("stepName",stepName);}
-        String sql="""
-                SELECT count(*),coalesce(avg(extract(epoch from (e.end_time-e.start_time))*1000),0),
-                 coalesce(min(extract(epoch from (e.end_time-e.start_time))*1000),0),
-                 coalesce(max(extract(epoch from (e.end_time-e.start_time))*1000),0),
-                 coalesce(percentile_cont(.5) within group(order by extract(epoch from (e.end_time-e.start_time))*1000),0),
-                 coalesce(percentile_cont(.95) within group(order by extract(epoch from (e.end_time-e.start_time))*1000),0),
-                 coalesce(percentile_cont(.99) within group(order by extract(epoch from (e.end_time-e.start_time))*1000),0)
-                """+source+" WHERE e.start_time>=:from AND e.start_time<=:to AND e.end_time IS NOT NULL"+jobFilter+stepFilter;
-        return jdbc.sql(sql).params(p).query((rs,row)->new PerformanceMetrics(new MetricWindow(from,to),rs.getLong(1),
-                rs.getDouble(2),rs.getLong(3),rs.getLong(4),rs.getDouble(5),rs.getDouble(6),rs.getDouble(7),
-                0,0,0,0,0,0)).single();
+        if(stepName!=null){source=" FROM batch_step_execution e JOIN batch_job_execution je ON je.job_execution_id=e.job_execution_id JOIN batch_job_instance i ON i.job_instance_id=je.job_instance_id";stepFilter=" AND e.step_name=:stepName";p.put("stepName",stepName);}
+        String sql="SELECT TIMESTAMPDIFF(MICROSECOND,e.start_time,e.end_time)/1000.0"+source+
+                " WHERE e.start_time>=:from AND e.start_time<=:to AND e.end_time IS NOT NULL"+jobFilter+stepFilter+
+                " ORDER BY e.start_time";
+        List<Double> values=jdbc.sql(sql).params(p).query(Double.class).list();
+        double average=values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        long min=values.isEmpty()?0:Math.round(values.stream().mapToDouble(Double::doubleValue).min().orElse(0));
+        long max=values.isEmpty()?0:Math.round(values.stream().mapToDouble(Double::doubleValue).max().orElse(0));
+        return new PerformanceMetrics(new MetricWindow(from,to),values.size(),average,min,max,
+                percentile(values,.50),percentile(values,.95),percentile(values,.99),0,0,0,0,0,0);
     }
 
     public ThroughputMetrics throughput(Instant from, Instant to, String jobName) {
         validateWindow(from,to); Map<String,Object> p=windowParams(from,to);
         String filter=""; if(jobName!=null){filter=" AND i.job_name=:jobName";p.put("jobName",jobName);}
         long[] jobs=jdbc.sql("""
-                SELECT count(*),count(*) filter(where e.status='COMPLETED'),count(*) filter(where e.status='FAILED'),
-                 count(*) filter(where e.status in ('STARTING','STARTED','STOPPING'))
-                FROM batch_job_execution e JOIN batch_job_instance i USING(job_instance_id)
+                SELECT count(*),sum(CASE WHEN e.status='COMPLETED' THEN 1 ELSE 0 END),
+                 sum(CASE WHEN e.status='FAILED' THEN 1 ELSE 0 END),
+                 sum(CASE WHEN e.status in ('STARTING','STARTED','STOPPING') THEN 1 ELSE 0 END)
+                FROM batch_job_execution e JOIN batch_job_instance i ON i.job_instance_id=e.job_instance_id
                 WHERE e.create_time>=:from AND e.create_time<=:to
                 """+filter).params(p).query((rs,row)->new long[]{rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4)}).single();
         long[] domain=jdbc.sql("""
-                SELECT count(*) filter(where status='PARTIAL'),coalesce(sum(total_documents),0),
+                SELECT sum(CASE WHEN status='PARTIAL' THEN 1 ELSE 0 END),coalesce(sum(total_documents),0),
                  coalesce(sum(completed_documents),0),coalesce(sum(failed_documents),0),
-                 count(*) filter(where status in ('PENDING','PROCESSING'))
+                 sum(CASE WHEN status in ('PENDING','PROCESSING') THEN 1 ELSE 0 END)
                 FROM solicitacao WHERE created_at>=:from AND created_at<=:to
                 """).params(windowParams(from,to)).query((rs,row)->new long[]{rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),rs.getLong(5)}).single();
         long finalized=jobs[1]+jobs[2]; double seconds=Math.max(1,java.time.Duration.between(from,to).toMillis()/1000d);
@@ -138,7 +137,8 @@ public class BatchMonitorRepository {
         return jdbc.sql("""
                 SELECT coalesce(sum(s.read_skip_count+s.process_skip_count+s.write_skip_count),0),
                  coalesce(sum(s.rollback_count),0) FROM batch_step_execution s
-                 JOIN batch_job_execution e USING(job_execution_id) JOIN batch_job_instance i USING(job_instance_id)
+                 JOIN batch_job_execution e ON e.job_execution_id=s.job_execution_id
+                 JOIN batch_job_instance i ON i.job_instance_id=e.job_instance_id
                 WHERE s.create_time>=:from AND s.create_time<=:to
                 """+filter).params(p).query((rs,row)->new ResilienceCounts(rs.getLong(1),rs.getLong(2))).single();
     }
@@ -165,7 +165,7 @@ public class BatchMonitorRepository {
                 """, "requestId", requestId == null ? null : requestId.toString());
         condition(where, params, startedFrom != null, " AND e.start_time>=:startedFrom", "startedFrom", startedFrom);
         condition(where, params, startedTo != null, " AND e.start_time<=:startedTo", "startedTo", startedTo);
-        String from = " FROM batch_job_execution e JOIN batch_job_instance i USING(job_instance_id)" + where;
+        String from = " FROM batch_job_execution e JOIN batch_job_instance i ON i.job_instance_id=e.job_instance_id" + where;
         long total = jdbc.sql("SELECT count(*)" + from).params(params).query(Long.class).single();
         params.put("limit", size); params.put("offset", page * size);
         List<BatchExecutionSummary> items = jdbc.sql("""
@@ -200,8 +200,21 @@ public class BatchMonitorRepository {
         long value = rs.getLong(column); return rs.wasNull() ? null : value;
     }
 
+    private static double percentile(List<Double> values, double percentile) {
+        if (values.isEmpty()) return 0;
+        List<Double> sorted = values.stream().sorted().toList();
+        double index = percentile * (sorted.size() - 1);
+        int lower = (int) Math.floor(index), upper = (int) Math.ceil(index);
+        if (lower == upper) return sorted.get(lower);
+        return sorted.get(lower) + (sorted.get(upper) - sorted.get(lower)) * (index - lower);
+    }
+
     private static void condition(StringBuilder sql, Map<String, Object> params, boolean include,
             String fragment, String name, Object value) {
-        if (include) { sql.append(fragment); params.put(name, value instanceof Instant i ? java.sql.Timestamp.from(i) : value); }
+        if (include) {
+            sql.append(fragment);
+            params.put(name, value instanceof Instant i ? java.sql.Timestamp.from(i)
+                    : value instanceof UUID id ? id.toString() : value);
+        }
     }
 }
